@@ -122,6 +122,11 @@ class SubmissionCreate(BaseModel):
     review_comments: List[str]
     editor_comments: str
     perceived_coherence: str
+    # User-added journal/publisher fields
+    custom_journal_name: Optional[str] = None
+    custom_publisher_name: Optional[str] = None
+    custom_journal_open_access: Optional[bool] = None
+    custom_journal_apc_required: Optional[str] = None  # yes, no, unknown
 
 class Journal(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -129,12 +134,19 @@ class Journal(BaseModel):
     name: str
     publisher_id: str
     is_user_added: bool = False
+    is_verified: bool = True  # False for user-added until promoted
+    open_access: Optional[bool] = None
+    apc_required: Optional[str] = None
+    validated_submission_count: int = 0  # For promotion tracking
     created_at: datetime
 
 class Publisher(BaseModel):
     model_config = ConfigDict(extra="ignore")
     publisher_id: str
     name: str
+    is_user_added: bool = False
+    is_verified: bool = True  # False for user-added until promoted
+    validated_submission_count: int = 0
     created_at: datetime
 
 class EvidenceFile(BaseModel):
