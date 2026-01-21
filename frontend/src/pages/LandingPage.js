@@ -7,8 +7,6 @@ import Footer from '../components/Footer';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
 import { 
   Shield, 
@@ -26,14 +24,11 @@ import {
 
 export default function LandingPage() {
   const { t } = useLanguage();
-  const { isAuthenticated, loginWithGoogle, loginWithOrcid } = useAuth();
+  const { isAuthenticated, loginWithGoogle, loginWithOrcid, orcidConfigured } = useAuth();
   const navigate = useNavigate();
   
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showOrcidForm, setShowOrcidForm] = useState(false);
-  const [orcidId, setOrcidId] = useState('');
-  const [orcidName, setOrcidName] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [orcidLoading, setOrcidLoading] = useState(false);
 
   const handleGetStarted = () => {
     if (isAuthenticated) {
@@ -43,24 +38,20 @@ export default function LandingPage() {
     }
   };
 
-  const handleOrcidLogin = async (e) => {
-    e.preventDefault();
-    
-    const orcidRegex = /^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/;
-    if (!orcidRegex.test(orcidId)) {
-      toast.error('Please enter a valid ORCID ID (format: 0000-0000-0000-0000)');
+  const handleOrcidLogin = async () => {
+    if (!orcidConfigured) {
+      toast.error('ORCID authentication is not yet configured. Please use Google sign-in.');
       return;
     }
     
-    setLoading(true);
+    setOrcidLoading(true);
     try {
-      await loginWithOrcid(orcidId, orcidName);
-      setShowAuthModal(false);
-      navigate('/submit');
+      await loginWithOrcid('/submit');
+      // User will be redirected to ORCID
     } catch (error) {
-      toast.error('Authentication failed. Please try again.');
+      toast.error('Failed to initiate ORCID authentication');
+      setOrcidLoading(false);
     }
-    setLoading(false);
   };
 
   const features = [
@@ -272,7 +263,7 @@ export default function LandingPage() {
 
       <Footer />
 
-      {/* Auth Modal */}
+      {/* Auth Modal - Professional OAuth options only */}
       <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -282,117 +273,77 @@ export default function LandingPage() {
             </DialogDescription>
           </DialogHeader>
           
-          {!showOrcidForm ? (
-            <div className="space-y-4 pt-4">
-              {/* Google OAuth Button */}
-              <Button 
-                onClick={() => {
-                  setShowAuthModal(false);
-                  loginWithGoogle();
-                }}
-                className="w-full bg-stone-900 text-white hover:bg-stone-800 py-6 text-base flex items-center justify-center space-x-3"
-                data-testid="modal-google-btn"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path
-                    fill="currentColor"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  />
-                </svg>
-                <span>Continue with Google</span>
-              </Button>
+          <div className="space-y-4 pt-4">
+            {/* Google OAuth Button */}
+            <Button 
+              onClick={() => {
+                setShowAuthModal(false);
+                loginWithGoogle();
+              }}
+              className="w-full bg-stone-900 text-white hover:bg-stone-800 py-6 text-base flex items-center justify-center space-x-3"
+              data-testid="modal-google-btn"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path
+                  fill="currentColor"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                />
+              </svg>
+              <span>Continue with Google</span>
+            </Button>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-stone-200" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-stone-500">or</span>
-                </div>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-stone-200" />
               </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-stone-500">or</span>
+              </div>
+            </div>
 
-              {/* ORCID Button */}
-              <Button 
-                onClick={() => setShowOrcidForm(true)}
-                variant="outline"
-                className="w-full py-6 text-base flex items-center justify-center space-x-3 border-[#A6CE39] text-[#A6CE39] hover:bg-[#A6CE39]/10"
-                data-testid="modal-orcid-btn"
-              >
+            {/* ORCID OAuth Button */}
+            <Button 
+              onClick={handleOrcidLogin}
+              disabled={orcidLoading}
+              variant="outline"
+              className="w-full py-6 text-base flex items-center justify-center space-x-3 border-[#A6CE39] text-[#A6CE39] hover:bg-[#A6CE39]/10 disabled:opacity-50"
+              data-testid="modal-orcid-btn"
+            >
+              {orcidLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
                 <svg className="w-5 h-5" viewBox="0 0 256 256" fill="currentColor">
                   <path d="M128 0C57.3 0 0 57.3 0 128s57.3 128 128 128 128-57.3 128-128S198.7 0 128 0zM82.8 200.8h-24V91.2h24v109.6zm-12-124.4c-7.7 0-14-6.3-14-14s6.3-14 14-14 14 6.3 14 14-6.3 14-14 14zm130.4 124.4h-24v-54.8c0-13.8-.3-31.6-19.2-31.6-19.3 0-22.2 15-22.2 30.6v55.8h-24V91.2h23v15h.3c3.2-6 11-12.3 22.6-12.3 24.2 0 28.7 16 28.7 36.6v70.3h-.2z"/>
                 </svg>
-                <span>Continue with ORCID</span>
-              </Button>
+              )}
+              <span>Continue with ORCID</span>
+            </Button>
 
-              <p className="text-xs text-stone-500 text-center mt-4">
-                <Lock className="w-3 h-3 inline mr-1" />
-                Authentication is used only to prevent spam. All contributions remain anonymous.
+            {!orcidConfigured && (
+              <p className="text-xs text-amber-600 text-center">
+                ORCID authentication requires configuration. Contact administrator.
+              </p>
+            )}
+
+            <div className="pt-2 border-t border-stone-100">
+              <p className="text-xs text-stone-500 text-center flex items-center justify-center">
+                <Lock className="w-3 h-3 mr-1" />
+                Authentication is used only to prevent spam and duplicate submissions. All contributions remain anonymous.
               </p>
             </div>
-          ) : (
-            <form onSubmit={handleOrcidLogin} className="space-y-4 pt-4">
-              <Button 
-                type="button"
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowOrcidForm(false)}
-                className="-ml-2"
-              >
-                ← Back to options
-              </Button>
-              
-              <div>
-                <Label htmlFor="modal-orcid" className="text-stone-700">ORCID ID *</Label>
-                <Input 
-                  id="modal-orcid"
-                  value={orcidId}
-                  onChange={(e) => setOrcidId(e.target.value)}
-                  placeholder="0000-0000-0000-0000"
-                  className="mt-1"
-                  required
-                />
-                <p className="text-xs text-stone-500 mt-1">Format: 0000-0000-0000-0000</p>
-              </div>
-              
-              <div>
-                <Label htmlFor="modal-name" className="text-stone-700">Display Name (optional)</Label>
-                <Input 
-                  id="modal-name"
-                  value={orcidName}
-                  onChange={(e) => setOrcidName(e.target.value)}
-                  placeholder="Your name"
-                  className="mt-1"
-                />
-              </div>
-              
-              <Button 
-                type="submit"
-                disabled={loading}
-                className="w-full bg-[#A6CE39] text-white hover:bg-[#8AB82E] py-6 text-base"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  'Continue with ORCID'
-                )}
-              </Button>
-            </form>
-          )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
