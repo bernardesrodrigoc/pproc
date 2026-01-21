@@ -412,7 +412,6 @@ async def orcid_callback(request: Request, response: Response):
     body = await request.json()
     code = body.get("code")
     state = body.get("state")
-    redirect_uri = body.get("redirect_uri")
     
     if not code:
         raise HTTPException(status_code=400, detail="Authorization code required")
@@ -420,7 +419,13 @@ async def orcid_callback(request: Request, response: Response):
     if not ORCID_CLIENT_ID or not ORCID_CLIENT_SECRET:
         raise HTTPException(status_code=500, detail="ORCID OAuth not configured")
     
-    # Exchange authorization code for access token
+    if not ORCID_REDIRECT_URI:
+        raise HTTPException(status_code=500, detail="ORCID_REDIRECT_URI not configured")
+    
+    # Log the redirect_uri being used for token exchange
+    logger.info(f"ORCID token exchange with redirect_uri: {ORCID_REDIRECT_URI}")
+    
+    # Exchange authorization code for access token - MUST use same redirect_uri as authorize
     async with httpx.AsyncClient() as http_client:
         try:
             token_response = await http_client.post(
@@ -430,7 +435,7 @@ async def orcid_callback(request: Request, response: Response):
                     "client_secret": ORCID_CLIENT_SECRET,
                     "grant_type": "authorization_code",
                     "code": code,
-                    "redirect_uri": redirect_uri
+                    "redirect_uri": ORCID_REDIRECT_URI
                 },
                 headers={
                     "Accept": "application/json",
