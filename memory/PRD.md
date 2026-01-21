@@ -7,7 +7,7 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 - **Frontend**: React 19 + TailwindCSS + Shadcn UI + Recharts
 - **Backend**: FastAPI (Python)
 - **Database**: MongoDB
-- **Authentication**: Emergent Google OAuth
+- **Authentication**: Emergent Google OAuth + **ORCID OAuth 2.0** ✅
 - **File Storage**: Local encrypted storage
 
 ## User Personas
