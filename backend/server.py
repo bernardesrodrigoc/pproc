@@ -277,9 +277,13 @@ async def create_session(request: Request, response: Response):
             "name": name,
             "picture": picture,
             "orcid": None,
+            "auth_provider": "google",
             "hashed_id": hashed_id,
-            "trust_score": 50.0,
+            "trust_score": 0.0,  # Start at 0
             "contribution_count": 0,
+            "validated_count": 0,
+            "validated_with_evidence_count": 0,
+            "flagged_count": 0,
             "is_admin": False,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
