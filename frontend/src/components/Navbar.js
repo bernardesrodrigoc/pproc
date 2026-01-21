@@ -158,6 +158,15 @@ export default function Navbar() {
                     <Settings className="w-4 h-4 mr-2" />
                     {t('nav.settings')}
                   </DropdownMenuItem>
+                  {isAdmin && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => navigate('/admin')} data-testid="menu-admin" className="text-orange-700">
+                        <Shield className="w-4 h-4 mr-2" />
+                        Admin Dashboard
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout} className="text-red-600" data-testid="menu-logout">
                     <LogOut className="w-4 h-4 mr-2" />
