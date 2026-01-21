@@ -106,7 +106,8 @@ export function AuthProvider({ children }) {
       logout, 
       processSession, 
       updateProfile,
-      isAuthenticated: !!user 
+      isAuthenticated: !!user,
+      isAdmin: user?.is_admin || false
     }}>
       {children}
     </AuthContext.Provider>
