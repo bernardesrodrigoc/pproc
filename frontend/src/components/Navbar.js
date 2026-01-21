@@ -20,11 +20,12 @@ import {
   Globe,
   FileText,
   LayoutDashboard,
-  ChevronDown
+  ChevronDown,
+  Shield
 } from 'lucide-react';
 
 export default function Navbar() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { t, language, setLanguage } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
@@ -40,6 +41,11 @@ export default function Navbar() {
     { path: '/dashboard', label: t('nav.dashboard'), icon: LayoutDashboard },
     { path: '/submit', label: t('nav.submit'), icon: FileText },
   ];
+
+  // Add admin link if user is admin
+  const adminLinks = isAdmin ? [
+    { path: '/admin', label: 'Admin', icon: Shield },
+  ] : [];
 
   return (
     <nav className="sticky top-0 z-50 glass border-b border-stone-200/50">
