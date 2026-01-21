@@ -77,7 +77,6 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 - [ ] Integration with journal databases
 
 ## Next Tasks
-1. Test Google OAuth flow end-to-end with real account
-2. Implement admin moderation dashboard
-3. Add email notifications for submission validation
-4. Implement journal normalization for user-added entries
+1. Implement journal normalization workflow for user-added entries
+2. Add email notifications for submission validation
+3. Export analytics data functionality (CSV/JSON)
