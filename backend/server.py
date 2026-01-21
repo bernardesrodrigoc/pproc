@@ -314,14 +314,24 @@ async def create_session(request: Request, response: Response):
     # Get updated user data
     user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
     
+    # Calculate if trust score should be visible
+    validated_count = user_doc.get("validated_count", 0)
+    validated_with_evidence = user_doc.get("validated_with_evidence_count", 0)
+    trust_score_visible = validated_count >= 2 or validated_with_evidence >= 1
+    
     return {
         "user_id": user_doc["user_id"],
         "email": user_doc["email"],
         "name": user_doc["name"],
         "picture": user_doc.get("picture"),
         "orcid": user_doc.get("orcid"),
-        "trust_score": user_doc.get("trust_score", 50.0),
+        "auth_provider": user_doc.get("auth_provider", "google"),
+        "trust_score": user_doc.get("trust_score", 0.0),
+        "trust_score_visible": trust_score_visible,
         "contribution_count": user_doc.get("contribution_count", 0),
+        "validated_count": validated_count,
+        "validated_with_evidence_count": validated_with_evidence,
+        "flagged_count": user_doc.get("flagged_count", 0),
         "is_admin": user_doc.get("is_admin", False)
     }
 
@@ -332,15 +342,27 @@ async def get_me(request: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
     
+    # Get fresh user data for accurate counts
+    user_doc = await db.users.find_one({"user_id": user.user_id}, {"_id": 0})
+    
+    validated_count = user_doc.get("validated_count", 0)
+    validated_with_evidence = user_doc.get("validated_with_evidence_count", 0)
+    trust_score_visible = validated_count >= 2 or validated_with_evidence >= 1
+    
     return {
-        "user_id": user.user_id,
-        "email": user.email,
-        "name": user.name,
-        "picture": user.picture,
-        "orcid": user.orcid,
-        "trust_score": user.trust_score,
-        "contribution_count": user.contribution_count,
-        "is_admin": user.is_admin
+        "user_id": user_doc["user_id"],
+        "email": user_doc["email"],
+        "name": user_doc["name"],
+        "picture": user_doc.get("picture"),
+        "orcid": user_doc.get("orcid"),
+        "auth_provider": user_doc.get("auth_provider", "google"),
+        "trust_score": user_doc.get("trust_score", 0.0),
+        "trust_score_visible": trust_score_visible,
+        "contribution_count": user_doc.get("contribution_count", 0),
+        "validated_count": validated_count,
+        "validated_with_evidence_count": validated_with_evidence,
+        "flagged_count": user_doc.get("flagged_count", 0),
+        "is_admin": user_doc.get("is_admin", False)
     }
 
 @api_router.post("/auth/logout")
