@@ -971,6 +971,7 @@ async def moderate_submission(
         raise HTTPException(status_code=404, detail="Submission not found")
     
     old_status = submission["status"]
+    has_evidence = submission.get("evidence_file_id") is not None
     
     # Update submission status
     await db.submissions.update_one(
@@ -995,21 +996,110 @@ async def moderate_submission(
     }
     await db.moderation_logs.insert_one(log_entry)
     
-    # Update user trust score based on moderation
+    # Update user trust score and counts based on moderation
+    # Trust Score Rules: +20 per validated, +10 per validated with evidence, -15 per flagged
+    user_update = {}
+    
     if moderation.status == "validated" and old_status != "validated":
-        # Increase trust score for validated submissions
-        await db.users.update_one(
-            {"hashed_id": submission["user_hashed_id"]},
-            {"$inc": {"trust_score": 5}}
+        # Validated: +20 points, +10 if has evidence
+        score_increase = 20 + (10 if has_evidence else 0)
+        user_update["$inc"] = {
+            "validated_count": 1,
+            "trust_score": score_increase
+        }
+        if has_evidence:
+            user_update["$inc"]["validated_with_evidence_count"] = 1
+        
+        # Update journal/publisher validated count for promotion tracking
+        await db.journals.update_one(
+            {"journal_id": submission["journal_id"]},
+            {"$inc": {"validated_submission_count": 1}}
         )
+        await db.publishers.update_one(
+            {"publisher_id": submission["publisher_id"]},
+            {"$inc": {"validated_submission_count": 1}}
+        )
+        
+        # Check if user-added journal should be promoted to verified
+        await check_and_promote_journal(submission["journal_id"])
+        await check_and_promote_publisher(submission["publisher_id"])
+        
     elif moderation.status == "flagged" and old_status != "flagged":
-        # Decrease trust score for flagged submissions
+        # Flagged: -15 points
+        user_update["$inc"] = {
+            "flagged_count": 1,
+            "trust_score": -15
+        }
+    elif old_status == "validated" and moderation.status != "validated":
+        # Reverting from validated: remove the points
+        score_decrease = 20 + (10 if has_evidence else 0)
+        user_update["$inc"] = {
+            "validated_count": -1,
+            "trust_score": -score_decrease
+        }
+        if has_evidence:
+            user_update["$inc"]["validated_with_evidence_count"] = -1
+        
+        # Decrease journal/publisher count
+        await db.journals.update_one(
+            {"journal_id": submission["journal_id"]},
+            {"$inc": {"validated_submission_count": -1}}
+        )
+        await db.publishers.update_one(
+            {"publisher_id": submission["publisher_id"]},
+            {"$inc": {"validated_submission_count": -1}}
+        )
+    elif old_status == "flagged" and moderation.status != "flagged":
+        # Reverting from flagged: restore points
+        user_update["$inc"] = {
+            "flagged_count": -1,
+            "trust_score": 15
+        }
+    
+    if user_update:
         await db.users.update_one(
             {"hashed_id": submission["user_hashed_id"]},
-            {"$inc": {"trust_score": -10}}
+            user_update
+        )
+        # Ensure trust score stays within 0-100
+        await db.users.update_one(
+            {"hashed_id": submission["user_hashed_id"], "trust_score": {"$lt": 0}},
+            {"$set": {"trust_score": 0}}
+        )
+        await db.users.update_one(
+            {"hashed_id": submission["user_hashed_id"], "trust_score": {"$gt": 100}},
+            {"$set": {"trust_score": 100}}
         )
     
     return {"message": "Submission moderated successfully", "status": moderation.status}
+
+async def check_and_promote_journal(journal_id: str):
+    """Check if a user-added journal should be promoted to verified"""
+    journal = await db.journals.find_one({"journal_id": journal_id}, {"_id": 0})
+    if not journal or not journal.get("is_user_added") or journal.get("is_verified"):
+        return
+    
+    # Promotion requires 3+ validated submissions
+    if journal.get("validated_submission_count", 0) >= 3:
+        await db.journals.update_one(
+            {"journal_id": journal_id},
+            {"$set": {"is_verified": True}}
+        )
+        logger.info(f"Journal {journal['name']} promoted to verified status")
+
+async def check_and_promote_publisher(publisher_id: str):
+    """Check if a user-added publisher should be promoted to verified"""
+    publisher = await db.publishers.find_one({"publisher_id": publisher_id}, {"_id": 0})
+    if not publisher or not publisher.get("is_user_added") or publisher.get("is_verified"):
+        return
+    
+    # Promotion requires 3+ validated submissions
+    if publisher.get("validated_submission_count", 0) >= 3:
+        await db.publishers.update_one(
+            {"publisher_id": publisher_id},
+            {"$set": {"is_verified": True}}
+        )
+        logger.info(f"Publisher {publisher['name']} promoted to verified status")
 
 @api_router.get("/admin/evidence/{file_id}")
 async def get_evidence_file(file_id: str, request: Request):
