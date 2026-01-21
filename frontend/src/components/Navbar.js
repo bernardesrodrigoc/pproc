@@ -92,6 +92,22 @@ export default function Navbar() {
                 <span>{label}</span>
               </Link>
             ))}
+
+            {adminLinks.map(({ path, label, icon: Icon }) => (
+              <Link
+                key={path}
+                to={path}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2
+                  ${isActive(path) 
+                    ? 'bg-orange-100 text-orange-900' 
+                    : 'text-orange-700 hover:text-orange-900 hover:bg-orange-50'
+                  }`}
+                data-testid="admin-nav-link"
+              >
+                <Icon className="w-4 h-4" />
+                <span>{label}</span>
+              </Link>
+            ))}
           </div>
 
           {/* Right side */}
