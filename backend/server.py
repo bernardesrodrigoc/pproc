@@ -319,7 +319,8 @@ async def get_me(request: Request):
         "picture": user.picture,
         "orcid": user.orcid,
         "trust_score": user.trust_score,
-        "contribution_count": user.contribution_count
+        "contribution_count": user.contribution_count,
+        "is_admin": user.is_admin
     }
 
 @api_router.post("/auth/logout")
