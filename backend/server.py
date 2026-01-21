@@ -365,6 +365,102 @@ async def get_me(request: Request):
         "is_admin": user_doc.get("is_admin", False)
     }
 
+@api_router.post("/auth/orcid")
+async def orcid_auth(request: Request, response: Response):
+    """Authenticate with ORCID OAuth"""
+    body = await request.json()
+    orcid_id = body.get("orcid_id")
+    name = body.get("name")
+    
+    if not orcid_id:
+        raise HTTPException(status_code=400, detail="ORCID ID required")
+    
+    # Normalize ORCID ID format (xxxx-xxxx-xxxx-xxxx)
+    orcid_id = orcid_id.strip()
+    
+    # Use ORCID as the unique identifier
+    email = f"{orcid_id}@orcid.org"  # Synthetic email for ORCID users
+    
+    # Check if user exists by ORCID
+    existing_user = await db.users.find_one({"orcid": orcid_id}, {"_id": 0})
+    
+    if existing_user:
+        user_id = existing_user["user_id"]
+        # Update name if changed
+        if name:
+            await db.users.update_one(
+                {"user_id": user_id},
+                {"$set": {"name": name}}
+            )
+    else:
+        # Create new user
+        user_id = f"user_{uuid.uuid4().hex[:12]}"
+        hashed_id = generate_hashed_id(orcid_id)
+        
+        new_user = {
+            "user_id": user_id,
+            "email": email,
+            "name": name or f"ORCID User {orcid_id[-4:]}",
+            "picture": None,
+            "orcid": orcid_id,
+            "auth_provider": "orcid",
+            "hashed_id": hashed_id,
+            "trust_score": 0.0,
+            "contribution_count": 0,
+            "validated_count": 0,
+            "validated_with_evidence_count": 0,
+            "flagged_count": 0,
+            "is_admin": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.users.insert_one(new_user)
+    
+    # Create session
+    session_token = f"orcid_{uuid.uuid4().hex}"
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    session_doc = {
+        "session_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "session_token": session_token,
+        "expires_at": expires_at.isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.user_sessions.insert_one(session_doc)
+    
+    # Set cookie
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=7 * 24 * 60 * 60
+    )
+    
+    # Get updated user data
+    user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    
+    validated_count = user_doc.get("validated_count", 0)
+    validated_with_evidence = user_doc.get("validated_with_evidence_count", 0)
+    trust_score_visible = validated_count >= 2 or validated_with_evidence >= 1
+    
+    return {
+        "user_id": user_doc["user_id"],
+        "email": user_doc["email"],
+        "name": user_doc["name"],
+        "picture": user_doc.get("picture"),
+        "orcid": user_doc.get("orcid"),
+        "auth_provider": "orcid",
+        "trust_score": user_doc.get("trust_score", 0.0),
+        "trust_score_visible": trust_score_visible,
+        "contribution_count": user_doc.get("contribution_count", 0),
+        "validated_count": validated_count,
+        "validated_with_evidence_count": validated_with_evidence,
+        "flagged_count": user_doc.get("flagged_count", 0),
+        "is_admin": user_doc.get("is_admin", False)
+    }
+
 @api_router.post("/auth/logout")
 async def logout(request: Request, response: Response):
     """Logout user and clear session"""
