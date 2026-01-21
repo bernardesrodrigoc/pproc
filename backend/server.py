@@ -781,6 +781,246 @@ async def get_coherence_options():
         {"id": "no", "name": "No"}
     ]
 
+# ============== ADMIN ENDPOINTS ==============
+
+@api_router.get("/admin/stats")
+async def get_admin_stats(request: Request):
+    """Get admin dashboard statistics"""
+    await require_admin(request)
+    
+    total_users = await db.users.count_documents({})
+    total_submissions = await db.submissions.count_documents({})
+    pending_submissions = await db.submissions.count_documents({"status": "pending"})
+    validated_submissions = await db.submissions.count_documents({"status": "validated"})
+    flagged_submissions = await db.submissions.count_documents({"status": "flagged"})
+    
+    return {
+        "total_users": total_users,
+        "total_submissions": total_submissions,
+        "pending_submissions": pending_submissions,
+        "validated_submissions": validated_submissions,
+        "flagged_submissions": flagged_submissions
+    }
+
+@api_router.get("/admin/submissions")
+async def get_all_submissions(
+    request: Request,
+    status: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50
+):
+    """Get all submissions for admin review"""
+    await require_admin(request)
+    
+    query = {}
+    if status:
+        query["status"] = status
+    
+    submissions = await db.submissions.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Enrich with journal/publisher names
+    for sub in submissions:
+        journal = await db.journals.find_one({"journal_id": sub["journal_id"]}, {"_id": 0, "name": 1})
+        publisher = await db.publishers.find_one({"publisher_id": sub["publisher_id"]}, {"_id": 0, "name": 1})
+        sub["journal_name"] = journal["name"] if journal else "Unknown"
+        sub["publisher_name"] = publisher["name"] if publisher else "Unknown"
+        
+        # Check if has evidence
+        sub["has_evidence"] = sub.get("evidence_file_id") is not None
+    
+    total = await db.submissions.count_documents(query)
+    
+    return {
+        "submissions": submissions,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
+
+@api_router.get("/admin/submissions/{submission_id}")
+async def get_submission_detail(submission_id: str, request: Request):
+    """Get detailed submission for admin review"""
+    await require_admin(request)
+    
+    submission = await db.submissions.find_one(
+        {"submission_id": submission_id},
+        {"_id": 0}
+    )
+    
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    
+    # Enrich with journal/publisher info
+    journal = await db.journals.find_one({"journal_id": submission["journal_id"]}, {"_id": 0})
+    publisher = await db.publishers.find_one({"publisher_id": submission["publisher_id"]}, {"_id": 0})
+    submission["journal"] = journal
+    submission["publisher"] = publisher
+    
+    # Get evidence file info if exists
+    if submission.get("evidence_file_id"):
+        evidence = await db.evidence_files.find_one(
+            {"file_id": submission["evidence_file_id"]},
+            {"_id": 0, "encrypted_path": 0}  # Don't expose encrypted path
+        )
+        submission["evidence"] = evidence
+    
+    # Get moderation history
+    moderation_history = await db.moderation_logs.find(
+        {"submission_id": submission_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    submission["moderation_history"] = moderation_history
+    
+    return submission
+
+@api_router.put("/admin/submissions/{submission_id}/moderate")
+async def moderate_submission(
+    submission_id: str,
+    moderation: SubmissionModeration,
+    request: Request
+):
+    """Moderate a submission (validate, flag, or set pending)"""
+    admin = await require_admin(request)
+    
+    # Validate status
+    if moderation.status not in ["pending", "validated", "flagged"]:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    
+    submission = await db.submissions.find_one(
+        {"submission_id": submission_id},
+        {"_id": 0}
+    )
+    
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    
+    old_status = submission["status"]
+    
+    # Update submission status
+    await db.submissions.update_one(
+        {"submission_id": submission_id},
+        {"$set": {
+            "status": moderation.status,
+            "moderated_at": datetime.now(timezone.utc).isoformat(),
+            "moderated_by": admin.user_id
+        }}
+    )
+    
+    # Log moderation action
+    log_entry = {
+        "log_id": f"log_{uuid.uuid4().hex[:12]}",
+        "submission_id": submission_id,
+        "admin_user_id": admin.user_id,
+        "admin_name": admin.name,
+        "old_status": old_status,
+        "new_status": moderation.status,
+        "notes": moderation.admin_notes,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.moderation_logs.insert_one(log_entry)
+    
+    # Update user trust score based on moderation
+    if moderation.status == "validated" and old_status != "validated":
+        # Increase trust score for validated submissions
+        await db.users.update_one(
+            {"hashed_id": submission["user_hashed_id"]},
+            {"$inc": {"trust_score": 5}}
+        )
+    elif moderation.status == "flagged" and old_status != "flagged":
+        # Decrease trust score for flagged submissions
+        await db.users.update_one(
+            {"hashed_id": submission["user_hashed_id"]},
+            {"$inc": {"trust_score": -10}}
+        )
+    
+    return {"message": "Submission moderated successfully", "status": moderation.status}
+
+@api_router.get("/admin/evidence/{file_id}")
+async def get_evidence_file(file_id: str, request: Request):
+    """Get decrypted evidence file for admin review"""
+    from fastapi.responses import StreamingResponse
+    import io
+    
+    await require_admin(request)
+    
+    evidence = await db.evidence_files.find_one(
+        {"file_id": file_id},
+        {"_id": 0}
+    )
+    
+    if not evidence:
+        raise HTTPException(status_code=404, detail="Evidence file not found")
+    
+    # Read and decrypt file
+    try:
+        encrypted_path = Path(evidence["encrypted_path"])
+        if not encrypted_path.exists():
+            raise HTTPException(status_code=404, detail="File not found on disk")
+        
+        with open(encrypted_path, "rb") as f:
+            encrypted_content = f.read()
+        
+        decrypted_content = fernet.decrypt(encrypted_content)
+        
+        return StreamingResponse(
+            io.BytesIO(decrypted_content),
+            media_type=evidence["mime_type"],
+            headers={
+                "Content-Disposition": f'inline; filename="{evidence["original_filename"]}"'
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error decrypting evidence: {e}")
+        raise HTTPException(status_code=500, detail="Error retrieving evidence file")
+
+@api_router.get("/admin/users")
+async def get_admin_users(
+    request: Request,
+    skip: int = 0,
+    limit: int = 50
+):
+    """Get all users for admin review"""
+    await require_admin(request)
+    
+    users = await db.users.find(
+        {},
+        {"_id": 0, "hashed_id": 0}  # Don't expose hashed_id
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.users.count_documents({})
+    
+    return {
+        "users": users,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
+
+@api_router.put("/admin/users/{user_id}/toggle-admin")
+async def toggle_admin_status(user_id: str, request: Request):
+    """Toggle admin status for a user"""
+    admin = await require_admin(request)
+    
+    # Prevent self-demotion
+    if admin.user_id == user_id:
+        raise HTTPException(status_code=400, detail="Cannot modify your own admin status")
+    
+    user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    new_admin_status = not user.get("is_admin", False)
+    
+    await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {"is_admin": new_admin_status}}
+    )
+    
+    return {"user_id": user_id, "is_admin": new_admin_status}
+
 # ============== HEALTH CHECK ==============
 
 @api_router.get("/")
