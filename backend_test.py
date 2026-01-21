@@ -482,6 +482,12 @@ class EditorialStatsAPITester:
         # Test options endpoints
         self.test_options_endpoints()
         
+        # Test admin endpoints
+        print("\n🔐 Testing Admin Endpoints")
+        print("-" * 30)
+        self.test_admin_endpoints_without_auth()
+        self.test_admin_endpoints_with_token()
+        
         # Print summary
         print("=" * 50)
         print(f"📊 Test Summary: {self.tests_passed}/{self.tests_run} tests passed")
