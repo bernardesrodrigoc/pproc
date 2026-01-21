@@ -23,7 +23,7 @@ const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
 export default function DashboardPage() {
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, trustScoreVisible } = useAuth();
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
 
