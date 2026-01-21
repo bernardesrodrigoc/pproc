@@ -373,46 +373,115 @@ async def get_me(request: Request):
         "is_admin": user_doc.get("is_admin", False)
     }
 
-@api_router.post("/auth/orcid")
-async def orcid_auth(request: Request, response: Response):
-    """Authenticate with ORCID OAuth"""
+@api_router.get("/auth/orcid/authorize")
+async def orcid_authorize(request: Request):
+    """Initiate ORCID OAuth flow - redirect user to ORCID authorization page"""
+    if not ORCID_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="ORCID OAuth not configured")
+    
+    # Get the redirect URL from frontend
+    redirect_after = request.query_params.get("redirect", "/dashboard")
+    
+    # Build the frontend callback URL
+    frontend_origin = request.headers.get("origin") or os.environ.get("FRONTEND_URL", "")
+    callback_url = f"{frontend_origin}/auth/orcid/callback"
+    
+    # Store the redirect URL in a temporary state
+    state = f"{uuid.uuid4().hex}:{redirect_after}"
+    
+    # Build ORCID authorization URL
+    params = {
+        "client_id": ORCID_CLIENT_ID,
+        "response_type": "code",
+        "scope": "/authenticate",  # Only need authentication, not data access
+        "redirect_uri": callback_url,
+        "state": state
+    }
+    
+    auth_url = f"{ORCID_BASE_URL}/oauth/authorize?{urlencode(params)}"
+    
+    return {"authorization_url": auth_url, "state": state}
+
+@api_router.post("/auth/orcid/callback")
+async def orcid_callback(request: Request, response: Response):
+    """Handle ORCID OAuth callback - exchange code for token and create session"""
     body = await request.json()
-    orcid_id = body.get("orcid_id")
-    name = body.get("name")
+    code = body.get("code")
+    state = body.get("state")
+    redirect_uri = body.get("redirect_uri")
+    
+    if not code:
+        raise HTTPException(status_code=400, detail="Authorization code required")
+    
+    if not ORCID_CLIENT_ID or not ORCID_CLIENT_SECRET:
+        raise HTTPException(status_code=500, detail="ORCID OAuth not configured")
+    
+    # Exchange authorization code for access token
+    async with httpx.AsyncClient() as http_client:
+        try:
+            token_response = await http_client.post(
+                f"{ORCID_BASE_URL}/oauth/token",
+                data={
+                    "client_id": ORCID_CLIENT_ID,
+                    "client_secret": ORCID_CLIENT_SECRET,
+                    "grant_type": "authorization_code",
+                    "code": code,
+                    "redirect_uri": redirect_uri
+                },
+                headers={
+                    "Accept": "application/json",
+                    "Content-Type": "application/x-www-form-urlencoded"
+                }
+            )
+            
+            if token_response.status_code != 200:
+                logger.error(f"ORCID token exchange failed: {token_response.text}")
+                raise HTTPException(status_code=401, detail="Failed to authenticate with ORCID")
+            
+            token_data = token_response.json()
+            
+        except httpx.RequestError as e:
+            logger.error(f"ORCID request error: {e}")
+            raise HTTPException(status_code=500, detail="Failed to connect to ORCID")
+    
+    # Extract ORCID iD and name from token response
+    # ORCID returns the iD and name in the token response itself
+    orcid_id = token_data.get("orcid")
+    name = token_data.get("name")
     
     if not orcid_id:
-        raise HTTPException(status_code=400, detail="ORCID ID required")
+        raise HTTPException(status_code=400, detail="Could not retrieve ORCID iD")
     
-    # Normalize ORCID ID format (xxxx-xxxx-xxxx-xxxx)
-    orcid_id = orcid_id.strip()
+    # Hash the ORCID iD for storage (never store raw ORCID)
+    hashed_orcid = hashlib.sha256(f"orcid:{orcid_id}".encode()).hexdigest()
     
-    # Use ORCID as the unique identifier
-    email = f"{orcid_id}@orcid.org"  # Synthetic email for ORCID users
+    # Create synthetic email for internal use only
+    synthetic_email = f"{hashed_orcid[:16]}@orcid.internal"
     
-    # Check if user exists by ORCID
-    existing_user = await db.users.find_one({"orcid": orcid_id}, {"_id": 0})
+    # Check if user exists by hashed ORCID
+    existing_user = await db.users.find_one({"orcid_hash": hashed_orcid}, {"_id": 0})
     
     if existing_user:
         user_id = existing_user["user_id"]
-        # Update name if changed
-        if name:
+        # Update name if available and different
+        if name and name != existing_user.get("name"):
             await db.users.update_one(
                 {"user_id": user_id},
                 {"$set": {"name": name}}
             )
     else:
-        # Create new user
+        # Create new user with hashed ORCID
         user_id = f"user_{uuid.uuid4().hex[:12]}"
-        hashed_id = generate_hashed_id(orcid_id)
+        user_hashed_id = generate_hashed_id(hashed_orcid)
         
         new_user = {
             "user_id": user_id,
-            "email": email,
-            "name": name or f"ORCID User {orcid_id[-4:]}",
+            "email": synthetic_email,
+            "name": name or "ORCID User",
             "picture": None,
-            "orcid": orcid_id,
+            "orcid_hash": hashed_orcid,  # Store hashed ORCID only
             "auth_provider": "orcid",
-            "hashed_id": hashed_id,
+            "hashed_id": user_hashed_id,
             "trust_score": 0.0,
             "contribution_count": 0,
             "validated_count": 0,
@@ -423,13 +492,14 @@ async def orcid_auth(request: Request, response: Response):
         }
         await db.users.insert_one(new_user)
     
-    # Create session
+    # Create session (DO NOT store access token long-term)
     session_token = f"orcid_{uuid.uuid4().hex}"
     expires_at = datetime.now(timezone.utc) + timedelta(days=7)
     session_doc = {
         "session_id": str(uuid.uuid4()),
         "user_id": user_id,
         "session_token": session_token,
+        "auth_provider": "orcid",
         "expires_at": expires_at.isoformat(),
         "created_at": datetime.now(timezone.utc).isoformat()
     }
@@ -453,12 +523,14 @@ async def orcid_auth(request: Request, response: Response):
     validated_with_evidence = user_doc.get("validated_with_evidence_count", 0)
     trust_score_visible = validated_count >= 2 or validated_with_evidence >= 1
     
+    # Parse redirect from state
+    redirect_after = "/dashboard"
+    if state and ":" in state:
+        redirect_after = state.split(":", 1)[1]
+    
     return {
         "user_id": user_doc["user_id"],
-        "email": user_doc["email"],
         "name": user_doc["name"],
-        "picture": user_doc.get("picture"),
-        "orcid": user_doc.get("orcid"),
         "auth_provider": "orcid",
         "trust_score": user_doc.get("trust_score", 0.0),
         "trust_score_visible": trust_score_visible,
@@ -466,7 +538,16 @@ async def orcid_auth(request: Request, response: Response):
         "validated_count": validated_count,
         "validated_with_evidence_count": validated_with_evidence,
         "flagged_count": user_doc.get("flagged_count", 0),
-        "is_admin": user_doc.get("is_admin", False)
+        "is_admin": user_doc.get("is_admin", False),
+        "redirect": redirect_after
+    }
+
+@api_router.get("/auth/orcid/status")
+async def orcid_status():
+    """Check if ORCID OAuth is configured"""
+    return {
+        "configured": bool(ORCID_CLIENT_ID and ORCID_CLIENT_SECRET),
+        "sandbox": "sandbox" in ORCID_BASE_URL.lower()
     }
 
 @api_router.post("/auth/logout")
