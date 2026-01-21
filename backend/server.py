@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, UploadFile, File, Depends
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -14,6 +14,7 @@ from datetime import datetime, timezone, timedelta
 import httpx
 from cryptography.fernet import Fernet
 import base64
+from urllib.parse import urlencode
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -26,6 +27,13 @@ db = client[os.environ['DB_NAME']]
 # Encryption key for evidence files
 ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', Fernet.generate_key().decode())
 fernet = Fernet(ENCRYPTION_KEY.encode() if isinstance(ENCRYPTION_KEY, str) else ENCRYPTION_KEY)
+
+# ORCID OAuth Configuration
+ORCID_CLIENT_ID = os.environ.get('ORCID_CLIENT_ID', '')
+ORCID_CLIENT_SECRET = os.environ.get('ORCID_CLIENT_SECRET', '')
+# Use sandbox for development, production for live
+ORCID_BASE_URL = os.environ.get('ORCID_BASE_URL', 'https://sandbox.orcid.org')
+ORCID_API_URL = os.environ.get('ORCID_API_URL', 'https://pub.sandbox.orcid.org')
 
 # Upload directory
 UPLOAD_DIR = Path("/app/uploads")
