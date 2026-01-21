@@ -193,6 +193,15 @@ async def require_auth(request: Request) -> User:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user
 
+async def require_admin(request: Request) -> User:
+    """Require admin authentication for admin routes"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
 def generate_hashed_id(email: str) -> str:
     """Generate anonymous hashed ID from email"""
     salt = os.environ.get('HASH_SALT', 'editorial-stats-salt')
