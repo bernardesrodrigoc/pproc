@@ -76,10 +76,11 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 - [ ] Export analytics data (CSV/JSON)
 
 ### P2 (Medium Priority)
-- [ ] ORCID verification integration
+- [x] ORCID OAuth 2.0 authentication (COMPLETED Jan 21, 2026)
 - [ ] Advanced filtering on analytics
 - [ ] Time-series analytics (trends over time)
 - [ ] API rate limiting
+- [ ] Optional account linking (Google + ORCID)
 
 ### P3 (Nice to Have)
 - [ ] Mobile app (React Native)
