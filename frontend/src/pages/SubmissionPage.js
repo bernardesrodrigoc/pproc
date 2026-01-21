@@ -410,6 +410,9 @@ export default function SubmissionPage() {
                     onValueChange={(v) => {
                       updateFormData('publisher_id', v);
                       updateFormData('journal_id', ''); // Reset journal
+                      if (v !== 'other') {
+                        updateFormData('custom_publisher_name', '');
+                      }
                     }}
                   >
                     <SelectTrigger className="w-full" data-testid="publisher-select">
@@ -421,8 +424,23 @@ export default function SubmissionPage() {
                           {pub.name}
                         </SelectItem>
                       ))}
+                      <SelectItem value="other" className="text-orange-700 font-medium">
+                        Other / Not listed
+                      </SelectItem>
                     </SelectContent>
                   </Select>
+                  
+                  {formData.publisher_id === 'other' && (
+                    <div className="mt-3">
+                      <Input
+                        value={formData.custom_publisher_name}
+                        onChange={(e) => updateFormData('custom_publisher_name', e.target.value)}
+                        placeholder="Enter publisher name (will be reviewed)"
+                        className="w-full"
+                        data-testid="custom-publisher-input"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -431,7 +449,14 @@ export default function SubmissionPage() {
                   </Label>
                   <Select 
                     value={formData.journal_id} 
-                    onValueChange={(v) => updateFormData('journal_id', v)}
+                    onValueChange={(v) => {
+                      updateFormData('journal_id', v);
+                      if (v !== 'other') {
+                        updateFormData('custom_journal_name', '');
+                        updateFormData('custom_journal_open_access', null);
+                        updateFormData('custom_journal_apc_required', '');
+                      }
+                    }}
                     disabled={!formData.publisher_id}
                   >
                     <SelectTrigger className="w-full" data-testid="journal-select">
@@ -443,8 +468,65 @@ export default function SubmissionPage() {
                           {journal.name}
                         </SelectItem>
                       ))}
+                      <SelectItem value="other" className="text-orange-700 font-medium">
+                        Journal not listed
+                      </SelectItem>
                     </SelectContent>
                   </Select>
+                  
+                  {formData.journal_id === 'other' && (
+                    <div className="mt-3 space-y-4 p-4 bg-stone-50 rounded-lg border border-stone-200">
+                      <div>
+                        <Label className="text-stone-600 text-sm mb-2 block">Journal Name *</Label>
+                        <Input
+                          value={formData.custom_journal_name}
+                          onChange={(e) => updateFormData('custom_journal_name', e.target.value)}
+                          placeholder="Enter journal name"
+                          className="w-full"
+                          data-testid="custom-journal-input"
+                        />
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <Label className="text-stone-600 text-sm block">Additional Info (optional)</Label>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="open-access"
+                            checked={formData.custom_journal_open_access === true}
+                            onCheckedChange={(checked) => updateFormData('custom_journal_open_access', checked ? true : null)}
+                          />
+                          <Label htmlFor="open-access" className="text-sm cursor-pointer">Open Access journal</Label>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-stone-500 text-xs mb-1 block">APC Required?</Label>
+                          <RadioGroup 
+                            value={formData.custom_journal_apc_required}
+                            onValueChange={(v) => updateFormData('custom_journal_apc_required', v)}
+                            className="flex space-x-4"
+                          >
+                            <div className="flex items-center space-x-1">
+                              <RadioGroupItem value="yes" id="apc-yes" />
+                              <Label htmlFor="apc-yes" className="text-sm cursor-pointer">Yes</Label>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <RadioGroupItem value="no" id="apc-no" />
+                              <Label htmlFor="apc-no" className="text-sm cursor-pointer">No</Label>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <RadioGroupItem value="unknown" id="apc-unknown" />
+                              <Label htmlFor="apc-unknown" className="text-sm cursor-pointer">Unknown</Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                      </div>
+                      
+                      <p className="text-xs text-stone-500">
+                        User-added journals are stored as "Unverified" and won't appear in public rankings until validated.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
