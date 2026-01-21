@@ -1,0 +1,475 @@
+// Internationalization (i18n) for Editorial Decision Statistics Platform
+// Supports: English (en), Portuguese (pt), Spanish (es)
+
+const translations = {
+  en: {
+    // Navigation
+    nav: {
+      home: "Home",
+      dashboard: "Dashboard",
+      analytics: "Analytics",
+      submit: "Submit Case",
+      settings: "Settings",
+      login: "Sign In",
+      logout: "Sign Out",
+      mySubmissions: "My Submissions"
+    },
+    // Landing Page
+    landing: {
+      heroTitle: "Transparency in Peer Review",
+      heroSubtitle: "An anonymous, data-driven platform aggregating editorial decision statistics from scientific journals worldwide.",
+      getStarted: "Get Started",
+      exploreData: "Explore Data",
+      trustedBy: "Trusted by researchers worldwide",
+      howItWorks: "How It Works",
+      step1Title: "Submit Anonymously",
+      step1Desc: "Register your editorial decision with documentary evidence. Your identity is never revealed.",
+      step2Title: "We Aggregate",
+      step2Desc: "Data is processed into categorical statistics. No individual cases are ever displayed.",
+      step3Title: "Explore Insights",
+      step3Desc: "Access journal and publisher-level analytics to make informed submission decisions.",
+      privacyTitle: "Privacy by Design",
+      privacyDesc: "Your data is encrypted, anonymized, and never shared. We focus on process statistics, not individual complaints.",
+      featuresTitle: "Platform Features",
+      feature1: "Anonymous Submissions",
+      feature2: "Encrypted Evidence Storage",
+      feature3: "K-Anonymity Protection",
+      feature4: "Multi-dimensional Scores",
+      feature5: "Publisher Analytics",
+      feature6: "Scientific Area Insights"
+    },
+    // Auth
+    auth: {
+      signInTitle: "Welcome Back",
+      signInSubtitle: "Sign in to submit cases and track your contributions",
+      signInWithGoogle: "Continue with Google",
+      orcidLabel: "ORCID ID (Optional)",
+      orcidPlaceholder: "0000-0000-0000-0000",
+      privacyNote: "Your identity is protected. We only use your email for account access."
+    },
+    // Submission Form
+    submission: {
+      title: "Submit Editorial Decision",
+      subtitle: "Help build transparency in peer review. All data is anonymized.",
+      step1: "Manuscript",
+      step2: "Journal",
+      step3: "Decision",
+      step4: "Review",
+      step5: "Evidence",
+      scientificArea: "Scientific Area",
+      manuscriptType: "Manuscript Type",
+      selectJournal: "Select Journal",
+      selectPublisher: "Select Publisher",
+      decisionType: "Decision Type",
+      reviewerCount: "Number of Reviewers",
+      timeToDecision: "Time to Decision",
+      apcRange: "Article Processing Charge",
+      reviewComments: "Review Comment Types",
+      editorComments: "Editor Provided Comments?",
+      perceivedCoherence: "Were comments compatible with your manuscript?",
+      uploadEvidence: "Upload Evidence",
+      uploadDesc: "Upload the editorial decision email or screenshot. This file is encrypted and never public.",
+      dragDrop: "Drag & drop or click to upload",
+      supportedFormats: "PDF, PNG, JPG (max 10MB)",
+      next: "Continue",
+      back: "Back",
+      submit: "Submit",
+      submitting: "Submitting...",
+      successTitle: "Submission Received",
+      successDesc: "Thank you for contributing to transparency in peer review.",
+      privacyReminder: "Your submission is anonymous. The evidence you uploaded is encrypted and will only be used for internal validation."
+    },
+    // Dashboard
+    dashboard: {
+      title: "My Dashboard",
+      welcomeBack: "Welcome back",
+      mySubmissions: "My Submissions",
+      noSubmissions: "You haven't submitted any cases yet.",
+      startSubmitting: "Submit Your First Case",
+      trustScore: "Trust Score",
+      trustScoreDesc: "Based on your contribution history and consistency",
+      contributions: "Contributions",
+      recentActivity: "Recent Activity",
+      status: {
+        pending: "Pending Review",
+        validated: "Validated",
+        flagged: "Under Review"
+      }
+    },
+    // Analytics
+    analytics: {
+      title: "Analytics Dashboard",
+      subtitle: "Aggregated statistics from editorial decisions worldwide",
+      overview: "Overview",
+      publishers: "Publishers",
+      journals: "Journals",
+      areas: "Scientific Areas",
+      totalSubmissions: "Total Submissions",
+      avgTransparency: "Avg. Transparency",
+      avgReviewDepth: "Avg. Review Depth",
+      insufficientData: "Insufficient data for display (minimum 5 cases required for k-anonymity)",
+      scores: {
+        transparency: "Transparency Index",
+        transparencyDesc: "Measures reviewer presence and editorial engagement in the decision process",
+        reviewDepth: "Review Depth Index",
+        reviewDepthDesc: "Evaluates the thoroughness of peer review comments",
+        editorialEffort: "Editorial Effort Index",
+        editorialEffortDesc: "Assesses editor involvement with technical feedback",
+        consistency: "Consistency Index",
+        consistencyDesc: "Reflects alignment between review comments and manuscript content"
+      },
+      metrics: {
+        deskRejectRate: "Desk Reject Rate",
+        noPeerReviewRate: "No Peer Review Rate",
+        fastDecisionRate: "Fast Decision Rate",
+        slowDecisionRate: "Slow Decision Rate"
+      },
+      filterByPublisher: "Filter by Publisher",
+      allPublishers: "All Publishers",
+      cases: "cases"
+    },
+    // Settings
+    settings: {
+      title: "Settings",
+      language: "Language",
+      profile: "Profile",
+      orcid: "ORCID ID",
+      updateProfile: "Update Profile",
+      saved: "Settings saved"
+    },
+    // Common
+    common: {
+      loading: "Loading...",
+      error: "An error occurred",
+      retry: "Retry",
+      save: "Save",
+      cancel: "Cancel",
+      search: "Search",
+      filter: "Filter",
+      noResults: "No results found",
+      learnMore: "Learn More"
+    },
+    // Footer
+    footer: {
+      tagline: "Building transparency in scientific publishing",
+      terms: "Terms of Use",
+      privacy: "Privacy Policy",
+      about: "About",
+      contact: "Contact"
+    }
+  },
+  pt: {
+    // Navigation
+    nav: {
+      home: "Início",
+      dashboard: "Painel",
+      analytics: "Análises",
+      submit: "Enviar Caso",
+      settings: "Configurações",
+      login: "Entrar",
+      logout: "Sair",
+      mySubmissions: "Meus Envios"
+    },
+    // Landing Page
+    landing: {
+      heroTitle: "Transparência na Revisão por Pares",
+      heroSubtitle: "Uma plataforma anônima e orientada por dados que agrega estatísticas de decisões editoriais de periódicos científicos em todo o mundo.",
+      getStarted: "Começar",
+      exploreData: "Explorar Dados",
+      trustedBy: "Confiado por pesquisadores em todo o mundo",
+      howItWorks: "Como Funciona",
+      step1Title: "Envie Anonimamente",
+      step1Desc: "Registre sua decisão editorial com evidência documental. Sua identidade nunca é revelada.",
+      step2Title: "Nós Agregamos",
+      step2Desc: "Os dados são processados em estatísticas categóricas. Nenhum caso individual é exibido.",
+      step3Title: "Explore Insights",
+      step3Desc: "Acesse análises de periódicos e editoras para tomar decisões informadas de submissão.",
+      privacyTitle: "Privacidade por Design",
+      privacyDesc: "Seus dados são criptografados, anonimizados e nunca compartilhados. Focamos em estatísticas de processo, não em reclamações individuais.",
+      featuresTitle: "Recursos da Plataforma",
+      feature1: "Envios Anônimos",
+      feature2: "Armazenamento Criptografado",
+      feature3: "Proteção K-Anonimato",
+      feature4: "Pontuações Multidimensionais",
+      feature5: "Análises de Editoras",
+      feature6: "Insights por Área Científica"
+    },
+    // Auth
+    auth: {
+      signInTitle: "Bem-vindo de Volta",
+      signInSubtitle: "Entre para enviar casos e acompanhar suas contribuições",
+      signInWithGoogle: "Continuar com Google",
+      orcidLabel: "ORCID ID (Opcional)",
+      orcidPlaceholder: "0000-0000-0000-0000",
+      privacyNote: "Sua identidade é protegida. Usamos seu email apenas para acesso à conta."
+    },
+    // Submission Form
+    submission: {
+      title: "Enviar Decisão Editorial",
+      subtitle: "Ajude a construir transparência na revisão por pares. Todos os dados são anonimizados.",
+      step1: "Manuscrito",
+      step2: "Periódico",
+      step3: "Decisão",
+      step4: "Revisão",
+      step5: "Evidência",
+      scientificArea: "Área Científica",
+      manuscriptType: "Tipo de Manuscrito",
+      selectJournal: "Selecionar Periódico",
+      selectPublisher: "Selecionar Editora",
+      decisionType: "Tipo de Decisão",
+      reviewerCount: "Número de Revisores",
+      timeToDecision: "Tempo até Decisão",
+      apcRange: "Taxa de Processamento",
+      reviewComments: "Tipos de Comentários",
+      editorComments: "Editor Forneceu Comentários?",
+      perceivedCoherence: "Os comentários eram compatíveis com seu manuscrito?",
+      uploadEvidence: "Enviar Evidência",
+      uploadDesc: "Envie o email de decisão editorial ou captura de tela. Este arquivo é criptografado e nunca público.",
+      dragDrop: "Arraste e solte ou clique para enviar",
+      supportedFormats: "PDF, PNG, JPG (máx 10MB)",
+      next: "Continuar",
+      back: "Voltar",
+      submit: "Enviar",
+      submitting: "Enviando...",
+      successTitle: "Envio Recebido",
+      successDesc: "Obrigado por contribuir para a transparência na revisão por pares.",
+      privacyReminder: "Seu envio é anônimo. A evidência que você enviou é criptografada e será usada apenas para validação interna."
+    },
+    // Dashboard
+    dashboard: {
+      title: "Meu Painel",
+      welcomeBack: "Bem-vindo de volta",
+      mySubmissions: "Meus Envios",
+      noSubmissions: "Você ainda não enviou nenhum caso.",
+      startSubmitting: "Enviar Seu Primeiro Caso",
+      trustScore: "Pontuação de Confiança",
+      trustScoreDesc: "Baseada no seu histórico de contribuições e consistência",
+      contributions: "Contribuições",
+      recentActivity: "Atividade Recente",
+      status: {
+        pending: "Em Análise",
+        validated: "Validado",
+        flagged: "Em Revisão"
+      }
+    },
+    // Analytics
+    analytics: {
+      title: "Painel de Análises",
+      subtitle: "Estatísticas agregadas de decisões editoriais em todo o mundo",
+      overview: "Visão Geral",
+      publishers: "Editoras",
+      journals: "Periódicos",
+      areas: "Áreas Científicas",
+      totalSubmissions: "Total de Envios",
+      avgTransparency: "Transparência Média",
+      avgReviewDepth: "Profundidade Média",
+      insufficientData: "Dados insuficientes para exibição (mínimo de 5 casos necessários para k-anonimato)",
+      scores: {
+        transparency: "Índice de Transparência",
+        transparencyDesc: "Mede a presença de revisores e engajamento editorial no processo de decisão",
+        reviewDepth: "Índice de Profundidade",
+        reviewDepthDesc: "Avalia a minuciosidade dos comentários de revisão por pares",
+        editorialEffort: "Índice de Esforço Editorial",
+        editorialEffortDesc: "Avalia o envolvimento do editor com feedback técnico",
+        consistency: "Índice de Consistência",
+        consistencyDesc: "Reflete o alinhamento entre comentários de revisão e conteúdo do manuscrito"
+      },
+      metrics: {
+        deskRejectRate: "Taxa de Rejeição Direta",
+        noPeerReviewRate: "Taxa Sem Revisão",
+        fastDecisionRate: "Taxa de Decisão Rápida",
+        slowDecisionRate: "Taxa de Decisão Lenta"
+      },
+      filterByPublisher: "Filtrar por Editora",
+      allPublishers: "Todas as Editoras",
+      cases: "casos"
+    },
+    // Settings
+    settings: {
+      title: "Configurações",
+      language: "Idioma",
+      profile: "Perfil",
+      orcid: "ORCID ID",
+      updateProfile: "Atualizar Perfil",
+      saved: "Configurações salvas"
+    },
+    // Common
+    common: {
+      loading: "Carregando...",
+      error: "Ocorreu um erro",
+      retry: "Tentar Novamente",
+      save: "Salvar",
+      cancel: "Cancelar",
+      search: "Buscar",
+      filter: "Filtrar",
+      noResults: "Nenhum resultado encontrado",
+      learnMore: "Saiba Mais"
+    },
+    // Footer
+    footer: {
+      tagline: "Construindo transparência na publicação científica",
+      terms: "Termos de Uso",
+      privacy: "Política de Privacidade",
+      about: "Sobre",
+      contact: "Contato"
+    }
+  },
+  es: {
+    // Navigation
+    nav: {
+      home: "Inicio",
+      dashboard: "Panel",
+      analytics: "Análisis",
+      submit: "Enviar Caso",
+      settings: "Configuración",
+      login: "Iniciar Sesión",
+      logout: "Cerrar Sesión",
+      mySubmissions: "Mis Envíos"
+    },
+    // Landing Page
+    landing: {
+      heroTitle: "Transparencia en la Revisión por Pares",
+      heroSubtitle: "Una plataforma anónima basada en datos que agrega estadísticas de decisiones editoriales de revistas científicas de todo el mundo.",
+      getStarted: "Comenzar",
+      exploreData: "Explorar Datos",
+      trustedBy: "Confiado por investigadores de todo el mundo",
+      howItWorks: "Cómo Funciona",
+      step1Title: "Envía Anónimamente",
+      step1Desc: "Registra tu decisión editorial con evidencia documental. Tu identidad nunca se revela.",
+      step2Title: "Nosotros Agregamos",
+      step2Desc: "Los datos se procesan en estadísticas categóricas. Ningún caso individual se muestra.",
+      step3Title: "Explora Insights",
+      step3Desc: "Accede a análisis de revistas y editoriales para tomar decisiones de envío informadas.",
+      privacyTitle: "Privacidad por Diseño",
+      privacyDesc: "Tus datos están encriptados, anonimizados y nunca se comparten. Nos enfocamos en estadísticas de proceso, no en quejas individuales.",
+      featuresTitle: "Características de la Plataforma",
+      feature1: "Envíos Anónimos",
+      feature2: "Almacenamiento Encriptado",
+      feature3: "Protección K-Anonimato",
+      feature4: "Puntuaciones Multidimensionales",
+      feature5: "Análisis de Editoriales",
+      feature6: "Insights por Área Científica"
+    },
+    // Auth
+    auth: {
+      signInTitle: "Bienvenido de Nuevo",
+      signInSubtitle: "Inicia sesión para enviar casos y seguir tus contribuciones",
+      signInWithGoogle: "Continuar con Google",
+      orcidLabel: "ORCID ID (Opcional)",
+      orcidPlaceholder: "0000-0000-0000-0000",
+      privacyNote: "Tu identidad está protegida. Solo usamos tu correo para acceso a la cuenta."
+    },
+    // Submission Form
+    submission: {
+      title: "Enviar Decisión Editorial",
+      subtitle: "Ayuda a construir transparencia en la revisión por pares. Todos los datos son anonimizados.",
+      step1: "Manuscrito",
+      step2: "Revista",
+      step3: "Decisión",
+      step4: "Revisión",
+      step5: "Evidencia",
+      scientificArea: "Área Científica",
+      manuscriptType: "Tipo de Manuscrito",
+      selectJournal: "Seleccionar Revista",
+      selectPublisher: "Seleccionar Editorial",
+      decisionType: "Tipo de Decisión",
+      reviewerCount: "Número de Revisores",
+      timeToDecision: "Tiempo hasta Decisión",
+      apcRange: "Cargo por Procesamiento",
+      reviewComments: "Tipos de Comentarios",
+      editorComments: "¿El Editor Proporcionó Comentarios?",
+      perceivedCoherence: "¿Los comentarios eran compatibles con tu manuscrito?",
+      uploadEvidence: "Subir Evidencia",
+      uploadDesc: "Sube el correo de decisión editorial o captura de pantalla. Este archivo está encriptado y nunca es público.",
+      dragDrop: "Arrastra y suelta o haz clic para subir",
+      supportedFormats: "PDF, PNG, JPG (máx 10MB)",
+      next: "Continuar",
+      back: "Volver",
+      submit: "Enviar",
+      submitting: "Enviando...",
+      successTitle: "Envío Recibido",
+      successDesc: "Gracias por contribuir a la transparencia en la revisión por pares.",
+      privacyReminder: "Tu envío es anónimo. La evidencia que subiste está encriptada y solo se usará para validación interna."
+    },
+    // Dashboard
+    dashboard: {
+      title: "Mi Panel",
+      welcomeBack: "Bienvenido de nuevo",
+      mySubmissions: "Mis Envíos",
+      noSubmissions: "Aún no has enviado ningún caso.",
+      startSubmitting: "Enviar Tu Primer Caso",
+      trustScore: "Puntuación de Confianza",
+      trustScoreDesc: "Basada en tu historial de contribuciones y consistencia",
+      contributions: "Contribuciones",
+      recentActivity: "Actividad Reciente",
+      status: {
+        pending: "En Revisión",
+        validated: "Validado",
+        flagged: "Bajo Revisión"
+      }
+    },
+    // Analytics
+    analytics: {
+      title: "Panel de Análisis",
+      subtitle: "Estadísticas agregadas de decisiones editoriales de todo el mundo",
+      overview: "Resumen",
+      publishers: "Editoriales",
+      journals: "Revistas",
+      areas: "Áreas Científicas",
+      totalSubmissions: "Total de Envíos",
+      avgTransparency: "Transparencia Prom.",
+      avgReviewDepth: "Profundidad Prom.",
+      insufficientData: "Datos insuficientes para mostrar (mínimo 5 casos requeridos para k-anonimato)",
+      scores: {
+        transparency: "Índice de Transparencia",
+        transparencyDesc: "Mide la presencia de revisores y compromiso editorial en el proceso de decisión",
+        reviewDepth: "Índice de Profundidad",
+        reviewDepthDesc: "Evalúa la minuciosidad de los comentarios de revisión por pares",
+        editorialEffort: "Índice de Esfuerzo Editorial",
+        editorialEffortDesc: "Evalúa la participación del editor con feedback técnico",
+        consistency: "Índice de Consistencia",
+        consistencyDesc: "Refleja la alineación entre comentarios de revisión y contenido del manuscrito"
+      },
+      metrics: {
+        deskRejectRate: "Tasa de Rechazo Directo",
+        noPeerReviewRate: "Tasa Sin Revisión",
+        fastDecisionRate: "Tasa de Decisión Rápida",
+        slowDecisionRate: "Tasa de Decisión Lenta"
+      },
+      filterByPublisher: "Filtrar por Editorial",
+      allPublishers: "Todas las Editoriales",
+      cases: "casos"
+    },
+    // Settings
+    settings: {
+      title: "Configuración",
+      language: "Idioma",
+      profile: "Perfil",
+      orcid: "ORCID ID",
+      updateProfile: "Actualizar Perfil",
+      saved: "Configuración guardada"
+    },
+    // Common
+    common: {
+      loading: "Cargando...",
+      error: "Ocurrió un error",
+      retry: "Reintentar",
+      save: "Guardar",
+      cancel: "Cancelar",
+      search: "Buscar",
+      filter: "Filtrar",
+      noResults: "No se encontraron resultados",
+      learnMore: "Más Información"
+    },
+    // Footer
+    footer: {
+      tagline: "Construyendo transparencia en la publicación científica",
+      terms: "Términos de Uso",
+      privacy: "Política de Privacidad",
+      about: "Acerca de",
+      contact: "Contacto"
+    }
+  }
+};
+
+export default translations;
