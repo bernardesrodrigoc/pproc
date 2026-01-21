@@ -622,9 +622,16 @@ async def get_analytics_overview():
 
 @api_router.get("/analytics/publishers")
 async def get_publisher_analytics():
-    """Get publisher-level analytics"""
+    """Get publisher-level analytics (only verified publishers)"""
+    # Get list of verified publisher IDs
+    verified_publishers = await db.publishers.find(
+        {"$or": [{"is_verified": True}, {"is_verified": {"$exists": False}}]},
+        {"_id": 0, "publisher_id": 1}
+    ).to_list(1000)
+    verified_pub_ids = [p["publisher_id"] for p in verified_publishers]
+    
     pipeline = [
-        {"$match": {"status": {"$ne": "flagged"}}},
+        {"$match": {"status": {"$ne": "flagged"}, "publisher_id": {"$in": verified_pub_ids}}},
         {"$group": {
             "_id": "$publisher_id",
             "total_cases": {"$sum": 1},
@@ -678,8 +685,19 @@ async def get_publisher_analytics():
 
 @api_router.get("/analytics/journals")
 async def get_journal_analytics(publisher_id: Optional[str] = None):
-    """Get journal-level analytics"""
-    match_stage = {"status": {"$ne": "flagged"}}
+    """Get journal-level analytics (only verified journals)"""
+    # Get list of verified journal IDs
+    journal_query = {"$or": [{"is_verified": True}, {"is_verified": {"$exists": False}}]}
+    if publisher_id:
+        journal_query["publisher_id"] = publisher_id
+    
+    verified_journals = await db.journals.find(
+        journal_query,
+        {"_id": 0, "journal_id": 1}
+    ).to_list(1000)
+    verified_journal_ids = [j["journal_id"] for j in verified_journals]
+    
+    match_stage = {"status": {"$ne": "flagged"}, "journal_id": {"$in": verified_journal_ids}}
     if publisher_id:
         match_stage["publisher_id"] = publisher_id
     
