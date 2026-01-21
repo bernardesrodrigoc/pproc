@@ -264,6 +264,7 @@ async def create_session(request: Request, response: Response):
             "hashed_id": hashed_id,
             "trust_score": 50.0,
             "contribution_count": 0,
+            "is_admin": False,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.users.insert_one(new_user)
