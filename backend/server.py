@@ -56,6 +56,7 @@ class User(BaseModel):
     hashed_id: str  # Anonymous identifier for public data
     trust_score: float = 50.0  # Internal trust score (0-100)
     contribution_count: int = 0
+    is_admin: bool = False  # Admin role flag
     created_at: datetime
 
 class UserSession(BaseModel):
