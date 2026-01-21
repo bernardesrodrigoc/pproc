@@ -34,6 +34,8 @@ ORCID_CLIENT_SECRET = os.environ.get('ORCID_CLIENT_SECRET', '')
 # Use sandbox for development, production for live
 ORCID_BASE_URL = os.environ.get('ORCID_BASE_URL', 'https://sandbox.orcid.org')
 ORCID_API_URL = os.environ.get('ORCID_API_URL', 'https://pub.sandbox.orcid.org')
+# ORCID redirect URI - must be absolute URL matching ORCID Developer Portal registration
+ORCID_REDIRECT_URI = os.environ.get('ORCID_REDIRECT_URI', '')
 
 # Upload directory
 UPLOAD_DIR = Path("/app/uploads")
