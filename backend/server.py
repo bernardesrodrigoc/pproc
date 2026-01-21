@@ -53,9 +53,13 @@ class User(BaseModel):
     name: str
     picture: Optional[str] = None
     orcid: Optional[str] = None
+    auth_provider: str = "google"  # google or orcid
     hashed_id: str  # Anonymous identifier for public data
-    trust_score: float = 50.0  # Internal trust score (0-100)
+    trust_score: float = 0.0  # Internal trust score (0-100), starts at 0
     contribution_count: int = 0
+    validated_count: int = 0  # Count of validated submissions
+    validated_with_evidence_count: int = 0  # Validated submissions with evidence
+    flagged_count: int = 0  # Count of flagged submissions
     is_admin: bool = False  # Admin role flag
     created_at: datetime
 
