@@ -90,7 +90,7 @@ export function AuthProvider({ children }) {
       // Clear stored state
       sessionStorage.removeItem('orcid_state');
       
-      // Exchange code for session
+      // Exchange code for session - redirect_uri is handled by backend env var
       const response = await fetch(`${API}/auth/orcid/callback`, {
         method: 'POST',
         headers: {
@@ -99,8 +99,7 @@ export function AuthProvider({ children }) {
         credentials: 'include',
         body: JSON.stringify({
           code,
-          state,
-          redirect_uri: `${window.location.origin}/auth/orcid/callback`
+          state
         })
       });
 
