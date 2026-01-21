@@ -205,7 +205,13 @@ export default function SubmissionPage() {
       case 1:
         return formData.scientific_area && formData.manuscript_type;
       case 2:
-        return formData.publisher_id && formData.journal_id;
+        // Check publisher
+        const publisherValid = formData.publisher_id && 
+          (formData.publisher_id !== 'other' || formData.custom_publisher_name.trim());
+        // Check journal
+        const journalValid = formData.journal_id && 
+          (formData.journal_id !== 'other' || formData.custom_journal_name.trim());
+        return publisherValid && journalValid;
       case 3:
         return formData.decision_type && formData.reviewer_count && 
                formData.time_to_decision && formData.apc_range;
