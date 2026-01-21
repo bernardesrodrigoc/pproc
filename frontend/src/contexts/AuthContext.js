@@ -32,10 +32,33 @@ export function AuthProvider({ children }) {
     checkAuth();
   }, [checkAuth]);
 
-  const login = () => {
+  const loginWithGoogle = () => {
     // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
     const redirectUrl = window.location.origin + '/dashboard';
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+  };
+
+  const loginWithOrcid = async (orcidId, name) => {
+    try {
+      const response = await fetch(`${API}/auth/orcid`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ orcid_id: orcidId, name })
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+        return userData;
+      }
+      throw new Error('ORCID authentication failed');
+    } catch (error) {
+      console.error('ORCID auth error:', error);
+      throw error;
+    }
   };
 
   const logout = async () => {
@@ -102,12 +125,14 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{ 
       user, 
       loading, 
-      login, 
+      loginWithGoogle,
+      loginWithOrcid,
       logout, 
       processSession, 
       updateProfile,
       isAuthenticated: !!user,
-      isAdmin: user?.is_admin || false
+      isAdmin: user?.is_admin || false,
+      trustScoreVisible: user?.trust_score_visible || false
     }}>
       {children}
     </AuthContext.Provider>
