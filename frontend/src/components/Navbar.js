@@ -223,6 +223,21 @@ export default function Navbar() {
                       <span>{label}</span>
                     </Link>
                   ))}
+                  {adminLinks.map(({ path, label, icon: Icon }) => (
+                    <Link
+                      key={path}
+                      to={path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`block px-4 py-3 rounded-md text-sm font-medium transition-colors flex items-center space-x-2
+                        ${isActive(path) 
+                          ? 'bg-orange-100 text-orange-900' 
+                          : 'text-orange-700 hover:text-orange-900 hover:bg-orange-50'
+                        }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{label}</span>
+                    </Link>
+                  ))}
                   <button
                     onClick={() => { logout(); setMobileMenuOpen(false); }}
                     className="w-full text-left px-4 py-3 rounded-md text-sm font-medium text-red-600 hover:bg-red-50 flex items-center space-x-2"
