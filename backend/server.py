@@ -301,7 +301,8 @@ async def create_session(request: Request, response: Response):
         "picture": user_doc.get("picture"),
         "orcid": user_doc.get("orcid"),
         "trust_score": user_doc.get("trust_score", 50.0),
-        "contribution_count": user_doc.get("contribution_count", 0)
+        "contribution_count": user_doc.get("contribution_count", 0),
+        "is_admin": user_doc.get("is_admin", False)
     }
 
 @api_router.get("/auth/me")
