@@ -70,6 +70,17 @@ class UserSession(BaseModel):
 class UserProfileUpdate(BaseModel):
     orcid: Optional[str] = None
 
+class SubmissionModeration(BaseModel):
+    status: str  # validated, flagged, pending
+    admin_notes: Optional[str] = None
+
+class AdminStats(BaseModel):
+    total_users: int
+    total_submissions: int
+    pending_submissions: int
+    validated_submissions: int
+    flagged_submissions: int
+
 class Submission(BaseModel):
     model_config = ConfigDict(extra="ignore")
     submission_id: str
