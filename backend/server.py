@@ -440,13 +440,47 @@ async def create_submission(submission: SubmissionCreate, request: Request):
     
     submission_id = f"sub_{uuid.uuid4().hex[:12]}"
     
+    publisher_id = submission.publisher_id
+    journal_id = submission.journal_id
+    
+    # Handle user-added publisher ("other")
+    if submission.publisher_id == "other" and submission.custom_publisher_name:
+        publisher_id = f"pub_user_{uuid.uuid4().hex[:12]}"
+        new_publisher = {
+            "publisher_id": publisher_id,
+            "name": submission.custom_publisher_name.strip(),
+            "is_user_added": True,
+            "is_verified": False,
+            "validated_submission_count": 0,
+            "added_by_hashed_id": user.hashed_id,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.publishers.insert_one(new_publisher)
+    
+    # Handle user-added journal ("other")
+    if submission.journal_id == "other" and submission.custom_journal_name:
+        journal_id = f"journal_user_{uuid.uuid4().hex[:12]}"
+        new_journal = {
+            "journal_id": journal_id,
+            "name": submission.custom_journal_name.strip(),
+            "publisher_id": publisher_id,
+            "is_user_added": True,
+            "is_verified": False,
+            "open_access": submission.custom_journal_open_access,
+            "apc_required": submission.custom_journal_apc_required,
+            "validated_submission_count": 0,
+            "added_by_hashed_id": user.hashed_id,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.journals.insert_one(new_journal)
+    
     submission_doc = {
         "submission_id": submission_id,
         "user_hashed_id": user.hashed_id,
         "scientific_area": submission.scientific_area,
         "manuscript_type": submission.manuscript_type,
-        "journal_id": submission.journal_id,
-        "publisher_id": submission.publisher_id,
+        "journal_id": journal_id,
+        "publisher_id": publisher_id,
         "decision_type": submission.decision_type,
         "reviewer_count": submission.reviewer_count,
         "time_to_decision": submission.time_to_decision,
@@ -461,13 +495,10 @@ async def create_submission(submission: SubmissionCreate, request: Request):
     
     await db.submissions.insert_one(submission_doc)
     
-    # Update user contribution count and trust score
+    # Update user contribution count (trust score updated on validation, not submission)
     await db.users.update_one(
         {"user_id": user.user_id},
-        {
-            "$inc": {"contribution_count": 1},
-            "$set": {"trust_score": min(100, user.trust_score + 2)}
-        }
+        {"$inc": {"contribution_count": 1}}
     )
     
     return {"submission_id": submission_id, "status": "pending"}
