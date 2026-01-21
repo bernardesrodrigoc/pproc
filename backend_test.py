@@ -307,6 +307,159 @@ class EditorialStatsAPITester:
                 
         return all_success
 
+    def test_admin_endpoints_with_token(self) -> bool:
+        """Test admin endpoints using the provided admin session token"""
+        # Use the admin session token provided in the context
+        admin_token = "admin_test_1769015215491"
+        headers = {"Authorization": f"Bearer {admin_token}"}
+        
+        all_success = True
+        
+        # Test admin stats endpoint
+        try:
+            response = requests.get(f"{self.api_url}/admin/stats", headers=headers, timeout=10)
+            success = response.status_code == 200
+            
+            if success:
+                data = response.json()
+                self.log_test(
+                    "Admin Stats", 
+                    True, 
+                    f"Total users: {data.get('total_users', 0)}, Total submissions: {data.get('total_submissions', 0)}"
+                )
+            else:
+                self.log_test(
+                    "Admin Stats", 
+                    False, 
+                    f"Status code: {response.status_code}",
+                    {"status_code": response.status_code, "text": response.text[:200]}
+                )
+                all_success = False
+                
+        except Exception as e:
+            self.log_test("Admin Stats", False, f"Exception: {str(e)}")
+            all_success = False
+
+        # Test admin submissions endpoint
+        try:
+            response = requests.get(f"{self.api_url}/admin/submissions", headers=headers, timeout=10)
+            success = response.status_code == 200
+            
+            if success:
+                data = response.json()
+                submissions_count = len(data.get('submissions', []))
+                total = data.get('total', 0)
+                self.log_test(
+                    "Admin Submissions", 
+                    True, 
+                    f"Retrieved {submissions_count} submissions, Total: {total}"
+                )
+            else:
+                self.log_test(
+                    "Admin Submissions", 
+                    False, 
+                    f"Status code: {response.status_code}",
+                    {"status_code": response.status_code, "text": response.text[:200]}
+                )
+                all_success = False
+                
+        except Exception as e:
+            self.log_test("Admin Submissions", False, f"Exception: {str(e)}")
+            all_success = False
+
+        # Test admin submissions with status filter
+        for status in ['pending', 'validated', 'flagged']:
+            try:
+                response = requests.get(f"{self.api_url}/admin/submissions?status={status}", headers=headers, timeout=10)
+                success = response.status_code == 200
+                
+                if success:
+                    data = response.json()
+                    submissions_count = len(data.get('submissions', []))
+                    self.log_test(
+                        f"Admin Submissions Filter ({status})", 
+                        True, 
+                        f"Found {submissions_count} {status} submissions"
+                    )
+                else:
+                    self.log_test(
+                        f"Admin Submissions Filter ({status})", 
+                        False, 
+                        f"Status code: {response.status_code}",
+                        {"status_code": response.status_code}
+                    )
+                    all_success = False
+                    
+            except Exception as e:
+                self.log_test(f"Admin Submissions Filter ({status})", False, f"Exception: {str(e)}")
+                all_success = False
+
+        # Test admin users endpoint
+        try:
+            response = requests.get(f"{self.api_url}/admin/users", headers=headers, timeout=10)
+            success = response.status_code == 200
+            
+            if success:
+                data = response.json()
+                users_count = len(data.get('users', []))
+                total = data.get('total', 0)
+                self.log_test(
+                    "Admin Users", 
+                    True, 
+                    f"Retrieved {users_count} users, Total: {total}"
+                )
+            else:
+                self.log_test(
+                    "Admin Users", 
+                    False, 
+                    f"Status code: {response.status_code}",
+                    {"status_code": response.status_code, "text": response.text[:200]}
+                )
+                all_success = False
+                
+        except Exception as e:
+            self.log_test("Admin Users", False, f"Exception: {str(e)}")
+            all_success = False
+
+        return all_success
+
+    def test_admin_endpoints_without_auth(self) -> bool:
+        """Test that admin endpoints properly reject unauthorized requests"""
+        all_success = True
+        
+        # Test admin endpoints without authentication - should return 401
+        admin_endpoints = [
+            "/admin/stats",
+            "/admin/submissions", 
+            "/admin/users"
+        ]
+        
+        for endpoint in admin_endpoints:
+            try:
+                response = requests.get(f"{self.api_url}{endpoint}", timeout=10)
+                success = response.status_code == 401
+                
+                if success:
+                    self.log_test(
+                        f"Admin Auth Check {endpoint}", 
+                        True, 
+                        "Correctly rejected unauthorized request"
+                    )
+                else:
+                    self.log_test(
+                        f"Admin Auth Check {endpoint}", 
+                        False, 
+                        f"Expected 401, got {response.status_code}",
+                        {"status_code": response.status_code}
+                    )
+                    all_success = False
+                    
+            except Exception as e:
+                self.log_test(f"Admin Auth Check {endpoint}", False, f"Exception: {str(e)}")
+                all_success = False
+                
+        return all_success
+
     def run_all_tests(self) -> Dict:
         """Run all backend API tests"""
         print("🚀 Starting Backend API Tests")
