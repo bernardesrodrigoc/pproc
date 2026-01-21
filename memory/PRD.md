@@ -59,7 +59,7 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 - [x] Language toggle
 
 ### P1 (High Priority)
-- [ ] Admin dashboard for flagging/validating submissions
+- [x] Admin dashboard for flagging/validating submissions
 - [ ] User-added journal normalization workflow
 - [ ] Email notifications for submission status
 - [ ] Export analytics data (CSV/JSON)
