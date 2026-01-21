@@ -27,7 +27,7 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 ## What's Been Implemented (Jan 21, 2026)
 
 ### Backend APIs
-- Auth: `/api/auth/session`, `/api/auth/me`, `/api/auth/logout`
+- Auth: `/api/auth/session`, `/api/auth/me`, `/api/auth/logout`, `/api/auth/orcid` (NEW)
 - Users: `/api/users/profile`
 - Submissions: `/api/submissions`, `/api/submissions/my`, `/api/submissions/{id}/evidence`
 - Publishers/Journals: `/api/publishers`, `/api/journals`
@@ -36,14 +36,25 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 - **Admin**: `/api/admin/stats`, `/api/admin/submissions`, `/api/admin/submissions/{id}/moderate`, `/api/admin/evidence/{id}`, `/api/admin/users`, `/api/admin/users/{id}/toggle-admin`
 
 ### Frontend Pages
-- Landing page with hero, features, privacy section
-- Login page with Google OAuth
-- Dashboard (protected) - user submissions & trust score
-- Submission form (5-step wizard)
+- Landing page with hero, features, privacy section, **Auth Modal (Google + ORCID)**
+- Login page with **Google OAuth + ORCID authentication**
+- Dashboard (protected) - user submissions & **conditional trust score display**
+- Submission form (5-step wizard) with **"Other" options for publisher/journal**
 - Analytics dashboard with 4 tabs (Overview, Publishers, Journals, Areas)
 - Settings page (language, ORCID)
 - Terms of Use & Privacy Policy
 - **Admin Dashboard** (protected, admin-only) - Submissions moderation, User management
+
+### Trust Score System (UPDATED)
+- New users start with trust_score = 0
+- Trust score hidden until: 2+ validated submissions OR 1 validated with evidence
+- Calculation: +20 per validated, +10 per validated with evidence, -15 per flagged
+- Capped at 0-100
+
+### User-Added Journals Governance (NEW)
+- User-added journals/publishers stored as "Unverified" (is_verified=false)
+- Unverified entries excluded from public analytics
+- Auto-promotion to "Verified" after 3+ validated submissions
 
 ### Database Seed Data
 - 10 major publishers (Elsevier, Springer Nature, Wiley, MDPI, Frontiers, etc.)
