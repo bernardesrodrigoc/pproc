@@ -119,24 +119,43 @@ export default function DashboardPage() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Trust Score */}
-          <Card className="border-stone-200">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <p className="text-sm text-stone-500 mb-1">{t('dashboard.trustScore')}</p>
-                  <p className="font-serif text-4xl text-stone-900">
-                    {user?.trust_score?.toFixed(0) || 50}
-                  </p>
+          {/* Trust Score - Only show if visible */}
+          {trustScoreVisible ? (
+            <Card className="border-stone-200">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-sm text-stone-500 mb-1">{t('dashboard.trustScore')}</p>
+                    <p className="font-serif text-4xl text-stone-900">
+                      {user?.trust_score?.toFixed(0) || 0}
+                    </p>
+                  </div>
+                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <Award className="w-5 h-5 text-orange-700" />
+                  </div>
                 </div>
-                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <Award className="w-5 h-5 text-orange-700" />
+                <Progress value={user?.trust_score || 0} className="h-2 mb-2" />
+                <p className="text-xs text-stone-500">Based on validated, consistent submissions. Higher scores increase the statistical weight of your contributions.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-stone-200 bg-stone-50">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-sm text-stone-500 mb-1">{t('dashboard.trustScore')}</p>
+                    <p className="font-serif text-2xl text-stone-400">
+                      Not yet visible
+                    </p>
+                  </div>
+                  <div className="w-10 h-10 bg-stone-100 rounded-lg flex items-center justify-center">
+                    <Award className="w-5 h-5 text-stone-400" />
+                  </div>
                 </div>
-              </div>
-              <Progress value={user?.trust_score || 50} className="h-2 mb-2" />
-              <p className="text-xs text-stone-500">{t('dashboard.trustScoreDesc')}</p>
-            </CardContent>
-          </Card>
+                <p className="text-xs text-stone-500">Your trust score will be visible after 2 validated submissions, or 1 validated submission with evidence.</p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Contributions */}
           <Card className="border-stone-200">
@@ -153,7 +172,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <p className="text-sm text-stone-600">
-                {submissions.filter(s => s.status === 'validated').length} validated
+                {user?.validated_count || 0} validated • {user?.flagged_count || 0} flagged
               </p>
             </CardContent>
           </Card>
