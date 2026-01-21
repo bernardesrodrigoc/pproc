@@ -7,6 +7,7 @@ const API = process.env.REACT_APP_BACKEND_URL + '/api';
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [orcidConfigured, setOrcidConfigured] = useState(false);
 
   const checkAuth = useCallback(async () => {
     try {
@@ -28,9 +29,23 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Check if ORCID OAuth is configured
+  const checkOrcidStatus = useCallback(async () => {
+    try {
+      const response = await fetch(`${API}/auth/orcid/status`);
+      if (response.ok) {
+        const data = await response.json();
+        setOrcidConfigured(data.configured);
+      }
+    } catch (error) {
+      console.error('ORCID status check failed:', error);
+    }
+  }, []);
+
   useEffect(() => {
     checkAuth();
-  }, [checkAuth]);
+    checkOrcidStatus();
+  }, [checkAuth, checkOrcidStatus]);
 
   const loginWithGoogle = () => {
     // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
@@ -38,25 +53,67 @@ export function AuthProvider({ children }) {
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
-  const loginWithOrcid = async (orcidId, name) => {
+  const loginWithOrcid = async (redirectAfter = '/dashboard') => {
     try {
-      const response = await fetch(`${API}/auth/orcid`, {
+      // Get the ORCID authorization URL from backend
+      const response = await fetch(`${API}/auth/orcid/authorize?redirect=${encodeURIComponent(redirectAfter)}`, {
+        headers: {
+          'Origin': window.location.origin
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to initiate ORCID authentication');
+      }
+      
+      const data = await response.json();
+      
+      // Store state for callback verification
+      sessionStorage.setItem('orcid_state', data.state);
+      
+      // Redirect to ORCID authorization page
+      window.location.href = data.authorization_url;
+    } catch (error) {
+      console.error('ORCID auth initiation error:', error);
+      throw error;
+    }
+  };
+
+  const processOrcidCallback = async (code, state) => {
+    try {
+      // Verify state matches
+      const storedState = sessionStorage.getItem('orcid_state');
+      if (storedState && state !== storedState) {
+        throw new Error('State mismatch - possible CSRF attack');
+      }
+      
+      // Clear stored state
+      sessionStorage.removeItem('orcid_state');
+      
+      // Exchange code for session
+      const response = await fetch(`${API}/auth/orcid/callback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         credentials: 'include',
-        body: JSON.stringify({ orcid_id: orcidId, name })
+        body: JSON.stringify({
+          code,
+          state,
+          redirect_uri: `${window.location.origin}/auth/orcid/callback`
+        })
       });
 
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-        return userData;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'ORCID authentication failed');
       }
-      throw new Error('ORCID authentication failed');
+
+      const userData = await response.json();
+      setUser(userData);
+      return userData;
     } catch (error) {
-      console.error('ORCID auth error:', error);
+      console.error('ORCID callback error:', error);
       throw error;
     }
   };
@@ -127,12 +184,14 @@ export function AuthProvider({ children }) {
       loading, 
       loginWithGoogle,
       loginWithOrcid,
+      processOrcidCallback,
       logout, 
       processSession, 
       updateProfile,
       isAuthenticated: !!user,
       isAdmin: user?.is_admin || false,
-      trustScoreVisible: user?.trust_score_visible || false
+      trustScoreVisible: user?.trust_score_visible || false,
+      orcidConfigured
     }}>
       {children}
     </AuthContext.Provider>
