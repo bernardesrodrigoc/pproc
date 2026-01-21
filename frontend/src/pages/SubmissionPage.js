@@ -46,7 +46,12 @@ export default function SubmissionPage() {
     apc_range: '',
     review_comments: [],
     editor_comments: '',
-    perceived_coherence: ''
+    perceived_coherence: '',
+    // Custom journal/publisher fields
+    custom_publisher_name: '',
+    custom_journal_name: '',
+    custom_journal_open_access: null,
+    custom_journal_apc_required: ''
   });
   
   const [evidenceFile, setEvidenceFile] = useState(null);
