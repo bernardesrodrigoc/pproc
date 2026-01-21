@@ -89,6 +89,14 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 - [ ] Integration with journal databases
 
 ## Next Tasks
-1. Implement journal normalization workflow for user-added entries
-2. Add email notifications for submission validation
-3. Export analytics data functionality (CSV/JSON)
+1. Optional account linking for users with both Google and ORCID
+2. Implement journal normalization workflow for user-added entries
+3. Add email notifications for submission validation
+4. Export analytics data functionality (CSV/JSON)
+
+## Completed This Session (Jan 21, 2026)
+- ✅ ORCID OAuth 2.0 integration fully implemented and tested
+- ✅ Production ORCID API configured (not sandbox)
+- ✅ Login page shows both Google and ORCID auth options
+- ✅ All 11 backend tests passing (100%)
+- ✅ Frontend UI verified via automated testing
