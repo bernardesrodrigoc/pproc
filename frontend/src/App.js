@@ -53,6 +53,11 @@ function AppRouter() {
           <SettingsPage />
         </ProtectedRoute>
       } />
+      <Route path="/admin" element={
+        <ProtectedRoute>
+          <AdminPage />
+        </ProtectedRoute>
+      } />
     </Routes>
   );
 }
