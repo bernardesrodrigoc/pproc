@@ -381,26 +381,28 @@ async def orcid_authorize(request: Request):
     if not ORCID_CLIENT_ID:
         raise HTTPException(status_code=500, detail="ORCID OAuth not configured")
     
-    # Get the redirect URL from frontend
-    redirect_after = request.query_params.get("redirect", "/dashboard")
+    if not ORCID_REDIRECT_URI:
+        raise HTTPException(status_code=500, detail="ORCID_REDIRECT_URI not configured")
     
-    # Build the frontend callback URL
-    frontend_origin = request.headers.get("origin") or os.environ.get("FRONTEND_URL", "")
-    callback_url = f"{frontend_origin}/auth/orcid/callback"
+    # Get the redirect URL from frontend (where to go after auth completes)
+    redirect_after = request.query_params.get("redirect", "/dashboard")
     
     # Store the redirect URL in a temporary state
     state = f"{uuid.uuid4().hex}:{redirect_after}"
     
-    # Build ORCID authorization URL
+    # Build ORCID authorization URL with absolute redirect_uri from env
     params = {
         "client_id": ORCID_CLIENT_ID,
         "response_type": "code",
-        "scope": "/authenticate",  # Only need authentication, not data access
-        "redirect_uri": callback_url,
+        "scope": "/authenticate",
+        "redirect_uri": ORCID_REDIRECT_URI,
         "state": state
     }
     
     auth_url = f"{ORCID_BASE_URL}/oauth/authorize?{urlencode(params)}"
+    
+    # Log the full URL for debugging
+    logger.info(f"ORCID auth URL generated with redirect_uri: {ORCID_REDIRECT_URI}")
     
     return {"authorization_url": auth_url, "state": state}
 
