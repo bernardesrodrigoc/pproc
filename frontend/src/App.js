@@ -5,6 +5,7 @@ import { LanguageProvider } from "./i18n/LanguageContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AuthCallback from "./components/AuthCallback";
+import OrcidCallback from "./components/OrcidCallback";
 
 // Pages
 import LandingPage from "./pages/LandingPage";
@@ -23,7 +24,7 @@ import "./App.css";
 function AppRouter() {
   const location = useLocation();
   
-  // Check URL fragment for session_id (handles OAuth callback)
+  // Check URL fragment for session_id (handles Google OAuth callback)
   // This synchronous check prevents race conditions
   if (location.hash?.includes('session_id=')) {
     return <AuthCallback />;
@@ -36,6 +37,9 @@ function AppRouter() {
       <Route path="/analytics" element={<AnalyticsPage />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
+      
+      {/* ORCID OAuth Callback */}
+      <Route path="/auth/orcid/callback" element={<OrcidCallback />} />
       
       {/* Protected Routes */}
       <Route path="/dashboard" element={
