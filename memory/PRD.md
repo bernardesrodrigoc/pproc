@@ -33,6 +33,7 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 - Publishers/Journals: `/api/publishers`, `/api/journals`
 - Analytics: `/api/analytics/overview`, `/api/analytics/publishers`, `/api/analytics/journals`, `/api/analytics/areas`
 - Form options: `/api/options/*`
+- **Admin**: `/api/admin/stats`, `/api/admin/submissions`, `/api/admin/submissions/{id}/moderate`, `/api/admin/evidence/{id}`, `/api/admin/users`, `/api/admin/users/{id}/toggle-admin`
 
 ### Frontend Pages
 - Landing page with hero, features, privacy section
@@ -42,6 +43,7 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 - Analytics dashboard with 4 tabs (Overview, Publishers, Journals, Areas)
 - Settings page (language, ORCID)
 - Terms of Use & Privacy Policy
+- **Admin Dashboard** (protected, admin-only) - Submissions moderation, User management
 
 ### Database Seed Data
 - 10 major publishers (Elsevier, Springer Nature, Wiley, MDPI, Frontiers, etc.)
