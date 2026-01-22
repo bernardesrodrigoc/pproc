@@ -318,12 +318,25 @@ async def seed_sample_submissions(count: int = 500):
     print("Sample submissions seeded successfully!")
 
 
+async def seed_platform_settings():
+    """Initialize platform settings if not exists"""
+    print("Initializing platform settings...")
+    
+    existing = await db.platform_settings.find_one({"settings_id": "global"})
+    if not existing:
+        await db.platform_settings.insert_one(DEFAULT_PLATFORM_SETTINGS)
+        print("  Platform settings initialized with defaults")
+    else:
+        print("  Platform settings already exist, skipping")
+
+
 async def main():
     """Main seed function"""
     print("=" * 50)
     print("Editorial Decision Statistics Platform - Database Seeder")
     print("=" * 50)
     
+    await seed_platform_settings()
     await seed_publishers_and_journals()
     await seed_sample_submissions(500)
     
@@ -335,11 +348,15 @@ async def main():
     publisher_count = await db.publishers.count_documents({})
     journal_count = await db.journals.count_documents({})
     submission_count = await db.submissions.count_documents({})
+    sample_count = await db.submissions.count_documents({"is_sample": True})
+    real_count = await db.submissions.count_documents({"is_sample": {"$ne": True}})
     
     print(f"\nDatabase Summary:")
     print(f"  Publishers: {publisher_count}")
     print(f"  Journals: {journal_count}")
-    print(f"  Submissions: {submission_count}")
+    print(f"  Total Submissions: {submission_count}")
+    print(f"    - Sample Data: {sample_count}")
+    print(f"    - Real User Data: {real_count}")
 
 
 if __name__ == "__main__":
