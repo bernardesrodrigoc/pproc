@@ -137,7 +137,7 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 - Landing page with hero, features, privacy section, Auth Modal (Google + ORCID)
 - Login page with Google OAuth + ORCID authentication
 - Dashboard (protected) - user submissions, trust score, **Personal Insights section** (NEW)
-- Submission form (5-step wizard) with "Other" options
+- Submission form (6-step wizard) with hierarchical CNPq areas and conditional fields
 - Analytics dashboard with visibility controls and professional messaging (UPDATED)
 - Settings page (language, ORCID)
 - Terms of Use & Privacy Policy
@@ -164,11 +164,14 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 - [x] Language toggle
 - [x] Controlled Data Visibility System
 - [x] Quality Assessment System (new neutral fields + indices)
+- [x] CNPq Hierarchical Scientific Areas
+- [x] Conditional Form Logic (Open Access/APC, Editor Comments/Quality)
 
 ### P1 (High Priority)
 - [x] Admin dashboard for flagging/validating submissions
 - [x] Admin Settings tab with visibility controls
 - [x] Submission validation (valid_for_stats)
+- [ ] Admin: Manage CNPq hierarchical areas (edit, activate/deactivate)
 - [ ] User-added journal normalization workflow
 - [ ] Email notifications for submission status
 - [ ] Export analytics data (CSV/JSON)
