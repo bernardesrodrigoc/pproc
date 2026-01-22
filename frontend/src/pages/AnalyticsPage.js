@@ -60,7 +60,8 @@ export default function AnalyticsPage() {
           fetch(`${API}/publishers`).then(r => r.json()),
           fetch(`${API}/analytics/publishers`).then(r => r.json()),
           fetch(`${API}/analytics/journals`).then(r => r.json()),
-          fetch(`${API}/analytics/areas`).then(r => r.json())
+          fetch(`${API}/analytics/areas`).then(r => r.json()),
+          fetch(`${API}/analytics/visibility-status`).then(r => r.json())
         ]);
         
         setOverview(overviewRes);
@@ -68,6 +69,7 @@ export default function AnalyticsPage() {
         setPublisherAnalytics(pubAnalytics);
         setJournalAnalytics(journalAnalytics);
         setAreaAnalytics(areaAnalytics);
+        setVisibilityStatus(visibilityRes);
       } catch (error) {
         console.error('Failed to fetch analytics:', error);
       }
