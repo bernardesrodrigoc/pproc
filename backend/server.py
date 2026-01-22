@@ -507,6 +507,18 @@ async def create_session(request: Request, response: Response):
         "is_admin": user_doc.get("is_admin", False)
     }
 
+# --- Adicione esta função auxiliar logo antes da rota /auth/me ---
+def enrich_user_data(user_doc):
+    """Adiciona flags calculadas ao objeto do usuário"""
+    # O usuário tem ORCID se tiver o ID texto, o Hash, ou se logou via ORCID
+    has_orcid = (
+        user_doc.get("orcid") is not None or 
+        user_doc.get("orcid_hash") is not None or 
+        user_doc.get("auth_provider") == "orcid"
+    )
+    user_doc["has_orcid"] = has_orcid
+    return user_doc
+
 @api_router.get("/auth/me")
 async def get_me(request: Request):
     """Get current authenticated user"""
@@ -514,27 +526,21 @@ async def get_me(request: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
     
-    # Get fresh user data for accurate counts
+    # Busca dados frescos do banco
     user_doc = await db.users.find_one({"user_id": user.user_id}, {"_id": 0})
     
+    # APLICA A NOVA LÓGICA: Calcula se tem orcid
+    user_doc = enrich_user_data(user_doc)
+    
+    # Lógica de visualização do Trust Score (mantida igual)
     validated_count = user_doc.get("validated_count", 0)
     validated_with_evidence = user_doc.get("validated_with_evidence_count", 0)
     trust_score_visible = validated_count >= 2 or validated_with_evidence >= 1
     
+    # Retorna tudo que está no banco + as flags calculadas
     return {
-        "user_id": user_doc["user_id"],
-        "email": user_doc["email"],
-        "name": user_doc["name"],
-        "picture": user_doc.get("picture"),
-        "orcid": user_doc.get("orcid"),
-        "auth_provider": user_doc.get("auth_provider", "google"),
-        "trust_score": user_doc.get("trust_score", 0.0),
-        "trust_score_visible": trust_score_visible,
-        "contribution_count": user_doc.get("contribution_count", 0),
-        "validated_count": validated_count,
-        "validated_with_evidence_count": validated_with_evidence,
-        "flagged_count": user_doc.get("flagged_count", 0),
-        "is_admin": user_doc.get("is_admin", False)
+        **user_doc,
+        "trust_score_visible": trust_score_visible
     }
 
 @api_router.get("/auth/orcid/authorize")
