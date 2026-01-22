@@ -6,7 +6,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://pubprocess-1.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://editcheck.preview.emergentagent.com').rstrip('/')
 ADMIN_TOKEN = "O0TxVAXBmyse8PyU0Jsr3MUVt3Q9sjp_TT_KYCrevBs"
 
 
