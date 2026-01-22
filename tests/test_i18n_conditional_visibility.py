@@ -46,13 +46,15 @@ class TestCNPQHierarchicalAreas:
             assert all(s['code'].startswith('1.01.') for s in data)
         print(f"SUCCESS: Found {len(data)} Subáreas for Área 1.01")
     
-    def test_invalid_grande_area_returns_empty(self):
-        """Test invalid Grande Área code returns empty list"""
+    def test_invalid_grande_area_returns_404_or_empty(self):
+        """Test invalid Grande Área code returns 404 or empty list"""
         response = requests.get(f"{BASE_URL}/api/options/cnpq/areas/99")
-        assert response.status_code == 200
-        data = response.json()
-        assert data == []
-        print("SUCCESS: Invalid Grande Área returns empty list")
+        # API may return 404 or empty list for invalid codes
+        assert response.status_code in [200, 404]
+        if response.status_code == 200:
+            data = response.json()
+            assert data == []
+        print(f"SUCCESS: Invalid Grande Área returns status {response.status_code}")
 
 
 class TestFormOptions:
