@@ -814,6 +814,11 @@ async def create_submission(submission: SubmissionCreate, request: Request):
         }
         await db.journals.insert_one(new_journal)
     
+    # Validate submission for statistical validity
+    valid_for_stats, validation_flags = await validate_submission_for_stats(
+        user.hashed_id, journal_id, submission
+    )
+    
     submission_doc = {
         "submission_id": submission_id,
         "user_hashed_id": user.hashed_id,
@@ -828,8 +833,17 @@ async def create_submission(submission: SubmissionCreate, request: Request):
         "review_comments": submission.review_comments,
         "editor_comments": submission.editor_comments,
         "perceived_coherence": submission.perceived_coherence,
+        # NEW: Quality assessment fields
+        "overall_review_quality": getattr(submission, 'overall_review_quality', None),
+        "feedback_clarity": getattr(submission, 'feedback_clarity', None),
+        "decision_fairness": getattr(submission, 'decision_fairness', None),
+        "would_recommend": getattr(submission, 'would_recommend', None),
+        # Metadata
         "evidence_file_id": None,
         "status": "pending",
+        "is_sample": False,
+        "valid_for_stats": valid_for_stats,
+        "validation_flags": validation_flags,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -841,7 +855,71 @@ async def create_submission(submission: SubmissionCreate, request: Request):
         {"$inc": {"contribution_count": 1}}
     )
     
-    return {"submission_id": submission_id, "status": "pending"}
+    return {"submission_id": submission_id, "status": "pending", "valid_for_stats": valid_for_stats}
+
+
+async def validate_submission_for_stats(user_hashed_id: str, journal_id: str, submission) -> tuple:
+    """
+    Validate if a submission should be included in aggregated statistics.
+    
+    Returns:
+        tuple: (valid_for_stats: bool, validation_flags: dict)
+    
+    Checks:
+    1. Completeness - all required fields present
+    2. Logical consistency - no contradictory responses
+    3. Duplicates - not a duplicate submission (same user + journal within 30 days)
+    """
+    flags = {
+        "is_complete": True,
+        "is_consistent": True,
+        "is_unique": True,
+        "issues": []
+    }
+    
+    # 1. Check completeness (required fields)
+    required_fields = ['scientific_area', 'manuscript_type', 'decision_type', 
+                       'reviewer_count', 'time_to_decision', 'review_comments', 
+                       'editor_comments', 'perceived_coherence']
+    
+    for field in required_fields:
+        value = getattr(submission, field, None)
+        if value is None or (isinstance(value, str) and not value.strip()) or (isinstance(value, list) and len(value) == 0):
+            flags["is_complete"] = False
+            flags["issues"].append(f"missing_{field}")
+    
+    # 2. Check logical consistency
+    # Example: desk_reject typically has 0 reviewers and fast decision
+    reviewer_count = getattr(submission, 'reviewer_count', '')
+    decision_type = getattr(submission, 'decision_type', '')
+    review_comments = getattr(submission, 'review_comments', [])
+    
+    # Inconsistency: detailed review comments but 0 reviewers
+    if reviewer_count == "0" and review_comments and 'methodology' in review_comments or 'statistics' in review_comments:
+        flags["is_consistent"] = False
+        flags["issues"].append("inconsistent_reviewers_comments")
+    
+    # Inconsistency: desk reject with 2+ reviewers (unusual but not impossible - just flag)
+    if decision_type == "desk_reject" and reviewer_count == "2+":
+        flags["issues"].append("unusual_desk_reject_reviewers")  # Warning, not invalid
+    
+    # 3. Check for duplicates (same user + journal within 30 days)
+    thirty_days_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    
+    existing = await db.submissions.find_one({
+        "user_hashed_id": user_hashed_id,
+        "journal_id": journal_id,
+        "created_at": {"$gte": thirty_days_ago}
+    })
+    
+    if existing:
+        flags["is_unique"] = False
+        flags["issues"].append("duplicate_within_30_days")
+    
+    # Determine overall validity
+    valid_for_stats = flags["is_complete"] and flags["is_consistent"] and flags["is_unique"]
+    
+    return valid_for_stats, flags
 
 @api_router.post("/submissions/{submission_id}/evidence")
 async def upload_evidence(
