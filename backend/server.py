@@ -16,6 +16,8 @@ from cryptography.fernet import Fernet
 import base64
 from urllib.parse import urlencode
 
+
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -574,127 +576,159 @@ async def orcid_authorize(request: Request):
     
     return {"authorization_url": auth_url, "state": state}
 
+
 @api_router.post("/auth/orcid/callback")
 async def orcid_callback(request: Request, response: Response):
     """Handle ORCID OAuth callback - Login OR Link Account"""
+    # 1. Recupera dados da requisição
     body = await request.json()
     code = body.get("code")
     state = body.get("state")
-    
-    # ... (Mantenha as validações de code/client_id/redirect_uri iguais) ...
-    # ... (Mantenha a troca do token com httpx igual) ...
-    # ... (Até a parte onde você obtém 'orcid_id' e 'name') ...
-    
-    # Se precisar do código completo dessa parte inicial, me avise. 
-    # Vou focar na lógica de USUÁRIO abaixo:
 
-    # Hash the ORCID iD
+    if not code:
+        raise HTTPException(status_code=400, detail="Missing authorization code")
+
+    # 2. Prepara troca de Token com ORCID
+    data = {
+        "client_id": os.environ.get("ORCID_CLIENT_ID"),
+        "client_secret": os.environ.get("ORCID_CLIENT_SECRET"),
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": os.environ.get("ORCID_REDIRECT_URI"),
+    }
+
+    # 3. Faz a chamada externa para o ORCID
+    headers = {"Accept": "application/json"}
+    async with httpx.AsyncClient() as client:
+        # Tenta URL de Sandbox ou Produção baseado na variável
+        token_url = f"{os.environ.get('ORCID_BASE_URL', 'https://orcid.org')}/oauth/token"
+        r = await client.post(token_url, data=data, headers=headers)
+        
+        if r.status_code != 200:
+            logger.error(f"ORCID Token Error: {r.text}")
+            raise HTTPException(status_code=401, detail="Invalid credentials from ORCID")
+        
+        orcid_data = r.json()
+
+    # 4. Extrai dados do usuário
+    orcid_id = orcid_data.get("orcid")
+    name = orcid_data.get("name")
+    
+    # Hash do ORCID para privacidade no banco
     hashed_orcid = hashlib.sha256(f"orcid:{orcid_id}".encode()).hexdigest()
 
-    # --- LÓGICA DE VÍNCULO INTELIGENTE ---
+    # --- LÓGICA DE USUÁRIO (VÍNCULO OU LOGIN) ---
     
-    # 1. Verificar se já existe alguém logado (Tentativa de Vínculo)
+    # Verifica se já existe um usuário logado na sessão atual
     current_user = await get_current_user(request)
     
     if current_user:
-        # CENÁRIO: Usuário já logado (ex: Google) quer conectar ORCID
+        # CENÁRIO A: VÍNCULO (Usuário Google logado quer conectar ORCID)
         
-        # Verifica se esse ORCID já pertence a OUTRA pessoa
-        existing_orcid_user = await db.users.find_one(
+        # Verifica se esse ORCID já pertence a OUTRA conta
+        existing_other_user = await db.users.find_one(
             {"orcid_hash": hashed_orcid, "user_id": {"$ne": current_user.user_id}}
         )
         
-        if existing_orcid_user:
+        if existing_other_user:
             raise HTTPException(
                 status_code=409, 
                 detail="Este ORCID já está conectado a outra conta."
             )
             
-        # Tudo limpo: Vincula o ORCID à conta atual
+        # Vincula o ORCID à conta atual
         await db.users.update_one(
             {"user_id": current_user.user_id},
             {"$set": {
                 "orcid_hash": hashed_orcid,
-                # Opcional: Salvar nome se o atual for genérico
-                # "name": name 
+                "has_orcid": True,
+                "auth_provider_linked": "orcid" # Marcador opcional
             }}
         )
         
-        # Retorna o usuário atualizado
-        updated_user = await db.users.find_one({"user_id": current_user.user_id}, {"_id": 0})
-        updated_user = enrich_user_data(updated_user)
-        return updated_user
+        # Busca usuário atualizado para retornar
+        user_doc = await db.users.find_one({"user_id": current_user.user_id}, {"_id": 0})
+        user_doc = enrich_user_data(user_doc)
+        return user_doc
 
-    # 2. CENÁRIO: Ninguém logado (Tentativa de Login Normal)
-    
-    existing_user = await db.users.find_one({"orcid_hash": hashed_orcid}, {"_id": 0})
-    
-    if existing_user:
-        # Login em conta existente
-        user_id = existing_user["user_id"]
-        # Atualiza nome se necessário
-        if name and name != existing_user.get("name") and existing_user.get("auth_provider") == "orcid":
-             await db.users.update_one({"user_id": user_id}, {"$set": {"name": name}})
     else:
-        # Cria nova conta (Registro)
-        user_id = f"user_{uuid.uuid4().hex[:12]}"
-        user_hashed_id = generate_hashed_id(hashed_orcid)
-        synthetic_email = f"{hashed_orcid[:16]}@orcid.internal"
+        # CENÁRIO B: LOGIN / REGISTRO (Usuário não está logado)
         
-        new_user = {
+        existing_user = await db.users.find_one({"orcid_hash": hashed_orcid}, {"_id": 0})
+        
+        if existing_user:
+            # Login em conta existente
+            user_id = existing_user["user_id"]
+            # Atualiza nome se necessário e se for conta primária ORCID
+            if name and name != existing_user.get("name") and existing_user.get("auth_provider") == "orcid":
+                 await db.users.update_one({"user_id": user_id}, {"$set": {"name": name}})
+        else:
+            # Cria nova conta (Registro)
+            user_id = f"user_{uuid.uuid4().hex[:12]}"
+            # Gera um ID hash único para o sistema
+            user_hashed_id = hashlib.sha256(f"{orcid_id}{os.environ.get('HASH_SALT')}".encode()).hexdigest()[:16]
+            synthetic_email = f"{hashed_orcid[:16]}@orcid.internal"
+            
+            new_user = {
+                "user_id": user_id,
+                "email": synthetic_email,
+                "name": name or "ORCID User",
+                "picture": None,
+                "orcid_hash": hashed_orcid,
+                "has_orcid": True,
+                "auth_provider": "orcid",
+                "hashed_id": user_hashed_id,
+                "trust_score": 0.0,
+                "contribution_count": 0,
+                "validated_count": 0,
+                "validated_with_evidence_count": 0,
+                "flagged_count": 0,
+                "is_admin": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.users.insert_one(new_user)
+
+        # Cria sessão
+        session_token = f"orcid_{uuid.uuid4().hex}"
+        expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+        session_doc = {
+            "session_id": str(uuid.uuid4()),
             "user_id": user_id,
-            "email": synthetic_email,
-            "name": name or "ORCID User",
-            "picture": None,
-            "orcid_hash": hashed_orcid,
-            "has_orcid": True, # Já nasce com ORCID
+            "session_token": session_token,
             "auth_provider": "orcid",
-            "hashed_id": user_hashed_id,
-            "trust_score": 0.0,
-            "contribution_count": 0,
-            "validated_count": 0,
-            "validated_with_evidence_count": 0,
-            "flagged_count": 0,
-            "is_admin": False,
+            "expires_at": expires_at.isoformat(),
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.users.insert_one(new_user)
+        await db.user_sessions.insert_one(session_doc)
+        
+        # Configura Cookie
+        response.set_cookie(
+            key="session_token",
+            value=session_token,
+            httponly=True,
+            secure=True,
+            samesite="none",
+            path="/",
+            max_age=7 * 24 * 60 * 60
+        )
+        
+        user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+        user_doc = enrich_user_data(user_doc)
+        
+        # Redirecionamento
+        redirect_after = "/dashboard"
+        if state and ":" in state:
+            parts = state.split(":", 1)
+            if len(parts) > 1:
+                redirect_after = parts[1]
 
-    # Cria sessão (Igual ao código anterior)
-    session_token = f"orcid_{uuid.uuid4().hex}"
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-    session_doc = {
-        "session_id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "session_token": session_token,
-        "auth_provider": "orcid",
-        "expires_at": expires_at.isoformat(),
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.user_sessions.insert_one(session_doc)
-    
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=7 * 24 * 60 * 60
-    )
-    
-    user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
-    user_doc = enrich_user_data(user_doc)
-    
-    # ... (lógica de redirect do state) ...
-    redirect_after = "/dashboard"
-    if state and ":" in state:
-        redirect_after = state.split(":", 1)[1]
+        return {
+            **user_doc,
+            "redirect": redirect_after
+        }
 
-    return {
-        **user_doc,
-        "redirect": redirect_after
-    }
+
+
 
 @api_router.get("/auth/orcid/status")
 async def orcid_status():
