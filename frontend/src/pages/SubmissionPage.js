@@ -419,7 +419,7 @@ export default function SubmissionPage() {
         {/* Progress */}
         <div className="mb-8">
           <div className="flex justify-between text-sm mb-2">
-            <span className="text-stone-600">Step {step} of {totalSteps}</span>
+            <span className="text-stone-600">{t('submission.step1').split(' ')[0]} {step} / {totalSteps}</span>
             <span className="text-stone-500">{Math.round(progress)}%</span>
           </div>
           <Progress value={progress} className="h-2" />
@@ -429,7 +429,8 @@ export default function SubmissionPage() {
               t('submission.step2'),
               t('submission.step3'),
               t('submission.step4'),
-              t('submission.step5')
+              t('submission.step5'),
+              t('submission.step6')
             ].map((label, i) => (
               <span 
                 key={i} 
