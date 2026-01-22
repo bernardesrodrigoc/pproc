@@ -809,12 +809,37 @@ async def add_journal(request: Request, name: str, publisher_id: str):
 @api_router.post("/submissions")
 async def create_submission(submission: SubmissionCreate, request: Request):
     """Create a new editorial decision submission"""
+    # 1. Garante que o usuário está logado
     user = await require_auth(request)
+    
+    # --- NOVO: GUARDA DE INTEGRIDADE CIENTÍFICA ---
+    # Busca o perfil completo do usuário no banco
+    user_doc = await db.users.find_one({"user_id": user.user_id})
+    
+    # Verifica se existe vínculo com ORCID (seja pela flag, pelo hash ou pelo login original)
+    has_orcid = (
+        user_doc.get("has_orcid") is True or 
+        user_doc.get("orcid_hash") is not None or 
+        user_doc.get("auth_provider") == "orcid"
+    )
+
+    if not has_orcid:
+        raise HTTPException(
+            status_code=403, 
+            detail="Scientific Integrity Check: You must link your ORCID account in Settings to submit evidence."
+        )
+    # ----------------------------------------------
     
     submission_id = f"sub_{uuid.uuid4().hex[:12]}"
     
     publisher_id = submission.publisher_id
     journal_id = submission.journal_id
+    
+    # ... (o restante do código da função continua igual daqui para baixo) ...
+    # Pode manter o resto:
+    # submission_doc = {
+    #     "submission_id": submission_id,
+    #     ...
     
     # Handle user-added publisher ("other")
     if submission.publisher_id == "other" and submission.custom_publisher_name:
