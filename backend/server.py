@@ -1010,16 +1010,20 @@ async def get_visibility_status():
     }
 
 def get_visibility_message(settings: dict) -> Optional[str]:
-    """Generate appropriate message based on visibility settings"""
+    """Generate appropriate message based on visibility settings
+    
+    Messages use institutional, methodologically responsible, neutral tone.
+    Avoid language suggesting platform is 'empty' or 'in testing'.
+    """
     mode = settings.get("visibility_mode", "user_only")
     public_enabled = settings.get("public_stats_enabled", False)
     
     if mode == "user_only":
-        return "Statistics will be published once sufficient anonymized submissions are collected."
+        return "As estatísticas agregadas são exibidas automaticamente quando há volume mínimo de dados para garantir interpretação adequada."
     elif mode == "threshold_based" and not public_enabled:
-        return "Public statistics are being collected. Your contribution helps improve transparency in scholarly publishing."
+        return "Sua contribuição ajuda a construir uma infraestrutura de dados para análise do processo editorial científico."
     elif mode == "admin_forced" and not public_enabled:
-        return "Public statistics are currently under review."
+        return "As estatísticas públicas estão em revisão metodológica."
     return None
 
 @api_router.get("/analytics/overview")
