@@ -154,7 +154,7 @@ export default function SubmissionPage() {
     fetchJournals();
   }, [formData.publisher_id]);
 
-  const totalSteps = 5;
+  const totalSteps = 6;  // Updated: Added Quality Assessment step
   const progress = (step / totalSteps) * 100;
 
   const updateFormData = (field, value) => {
