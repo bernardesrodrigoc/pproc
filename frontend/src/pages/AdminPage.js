@@ -871,14 +871,102 @@ export default function AdminPage() {
                       {/* Info Note */}
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <p className="text-sm text-blue-800">
-                          <strong>Note:</strong> The scientific areas hierarchy is based on the official classification 
-                          and is currently read-only. To modify the hierarchy structure, contact system administrators.
+                          <strong>Management:</strong> To add, edit, or disable areas, use the buttons below. 
+                          Changes will immediately reflect in the submission form and analytics.
                         </p>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setNewAreaForm({ code: '', name: '', name_en: '', level: 'grande_area', parent_code: '' });
+                            setShowNewAreaModal(true);
+                          }}
+                        >
+                          + Add Major Area
+                        </Button>
+                        {selectedGrandeArea && (
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setNewAreaForm({ code: '', name: '', name_en: '', level: 'area', parent_code: selectedGrandeArea });
+                              setShowNewAreaModal(true);
+                            }}
+                          >
+                            + Add Area
+                          </Button>
+                        )}
+                        {selectedArea && (
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setNewAreaForm({ code: '', name: '', name_en: '', level: 'subarea', parent_code: selectedArea });
+                              setShowNewAreaModal(true);
+                            }}
+                          >
+                            + Add Subarea
+                          </Button>
+                        )}
                       </div>
                     </div>
                   )}
                 </CardContent>
               </Card>
+
+              {/* New Area Modal */}
+              {showNewAreaModal && (
+                <Dialog open={showNewAreaModal} onOpenChange={setShowNewAreaModal}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New {newAreaForm.level.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</DialogTitle>
+                      <DialogDescription>
+                        Create a new entry in the scientific areas hierarchy
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div>
+                        <Label>Code (e.g., 1.01.01)</Label>
+                        <Input
+                          value={newAreaForm.code}
+                          onChange={(e) => setNewAreaForm({...newAreaForm, code: e.target.value})}
+                          placeholder="Enter unique code"
+                        />
+                      </div>
+                      <div>
+                        <Label>Name (Portuguese)</Label>
+                        <Input
+                          value={newAreaForm.name}
+                          onChange={(e) => setNewAreaForm({...newAreaForm, name: e.target.value})}
+                          placeholder="Nome em Português"
+                        />
+                      </div>
+                      <div>
+                        <Label>Name (English)</Label>
+                        <Input
+                          value={newAreaForm.name_en}
+                          onChange={(e) => setNewAreaForm({...newAreaForm, name_en: e.target.value})}
+                          placeholder="Name in English"
+                        />
+                      </div>
+                      {newAreaForm.parent_code && (
+                        <p className="text-sm text-stone-500">
+                          Parent: <span className="font-mono">{newAreaForm.parent_code}</span>
+                        </p>
+                      )}
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setShowNewAreaModal(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleCreateArea} disabled={!newAreaForm.code || !newAreaForm.name}>
+                        Create Area
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           </TabsContent>
 
