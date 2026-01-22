@@ -2661,6 +2661,164 @@ async def toggle_admin_status(user_id: str, request: Request):
     
     return {"user_id": user_id, "is_admin": new_admin_status}
 
+
+
+# ============== DATABASE SEEDING (POPULAR BANCO INICIAL) ==============
+
+async def seed_database():
+    """Populates the database with comprehensive academic publishers and journals"""
+    try:
+        # Verifica se já tem dados. Se tiver publishers, assume que já foi populado.
+        if await db.publishers.count_documents({}) > 0:
+            logger.info("Database already populated. Skipping seed.")
+            return
+
+        logger.info("Database empty. Starting comprehensive seed process...")
+
+        # LISTA COMPLETA DE REVISTAS E EDITORAS
+        seed_data = {
+          "Elsevier": [
+            "The Lancet", "Cell", "Journal of Cleaner Production", "Science of the Total Environment",
+            "Applied Energy", "World Development", "Ecological Economics", "Trends in Ecology & Evolution",
+            "Trends in Neurosciences", "NeuroImage", "Environmental Pollution", "Biological Conservation",
+            "Journal of Economic Behavior & Organization", "Agricultural Systems", "Computers and Electronics in Agriculture",
+            "Soil Biology & Biochemistry", "Crop Protection", "Animal Behaviour", "Physiology & Behavior",
+            "Pattern Recognition", "Information Sciences"
+          ],
+          "Springer Nature": [
+            "Nature", "Nature Communications", "Scientific Reports", "Nature Ecology & Evolution",
+            "Nature Methods", "Nature Human Behaviour", "SpringerPlus", "Climatic Change",
+            "Journal of Business Ethics", "Environmental Science and Pollution Research", "Theoretical Ecology",
+            "Behavioral Ecology and Sociobiology", "Applied Artificial Intelligence", "Machine Learning",
+            "Artificial Intelligence Review", "Psychological Research", "Sustainability Science"
+          ],
+          "Wiley": [
+            "Advanced Materials", "Angewandte Chemie", "Ecology", "Global Change Biology",
+            "Journal of Finance", "Conservation Biology", "Evolution", "Journal of Applied Ecology",
+            "British Journal of Psychology", "European Journal of Social Psychology", "Human Brain Mapping",
+            "Pest Management Science", "Journal of Animal Ecology", "Plant Pathology", "Weed Research"
+          ],
+          "Taylor & Francis": [
+            "Journal of Natural History", "Journal of Peasant Studies", "Regional Studies",
+            "Critical Asian Studies", "Behavioral Ecology", "Journal of Environmental Planning and Management",
+            "Ethology Ecology & Evolution", "International Journal of Pest Management",
+            "Journal of Experimental & Theoretical Artificial Intelligence", "Applied Economics",
+            "Third World Quarterly", "Journal of Risk Research"
+          ],
+          "SAGE": [
+            "Organization Studies", "Urban Studies", "New Media & Society", "American Sociological Review",
+            "Social Studies of Science", "Journal of Management", "Environment and Planning A",
+            "Political Studies", "Teaching Sociology", "Qualitative Research", "Psychological Science"
+          ],
+          "PLOS": [
+            "PLOS ONE", "PLOS Biology", "PLOS Medicine", "PLOS Computational Biology",
+            "PLOS Genetics", "PLOS Pathogens", "PLOS Neglected Tropical Diseases",
+            "PLOS Climate", "PLOS Sustainability and Transformation"
+          ],
+          "MDPI": [
+            "Sustainability", "Energies", "Sensors", "Applied Sciences", "Water", "Agronomy",
+            "Insects", "Animals", "Biology", "Remote Sensing", "Information", "Entropy",
+            "Data", "AI", "Algorithms", "Plants", "Forests"
+          ],
+          "IEEE": [
+            "IEEE Access", "IEEE Transactions on Pattern Analysis and Machine Intelligence",
+            "IEEE Transactions on Neural Networks and Learning Systems", "IEEE Transactions on Image Processing",
+            "IEEE Transactions on Cybernetics", "IEEE Internet of Things Journal",
+            "IEEE Robotics and Automation Letters", "IEEE Software", "IEEE Transactions on Big Data"
+          ],
+          "ACM": [
+            "Communications of the ACM", "ACM Computing Surveys", "ACM Transactions on Graphics",
+            "ACM Transactions on Information Systems", "ACM Transactions on Intelligent Systems and Technology",
+            "CHI Conference Proceedings", "ICML Proceedings", "SIGGRAPH Proceedings"
+          ],
+          "Oxford University Press": [
+            "Oxford Economic Papers", "Bioinformatics", "Human Reproduction",
+            "Journal of Experimental Biology", "Systematic Biology",
+            "The Quarterly Journal of Economics", "British Journal of Political Science"
+          ],
+          "Cambridge University Press": [
+            "Behavioral and Brain Sciences", "Epidemiology and Psychiatric Sciences",
+            "Journal of Agricultural Science", "Animal", "Public Health Nutrition",
+            "International Organization", "Global Sustainability"
+          ],
+          "Frontiers": [
+            "Frontiers in Ecology and Evolution", "Frontiers in Plant Science", "Frontiers in Psychology",
+            "Frontiers in Neuroscience", "Frontiers in Environmental Science", "Frontiers in Artificial Intelligence",
+            "Frontiers in Agronomy", "Frontiers in Behavioral Neuroscience"
+          ],
+          "BioMed Central (BMC)": [
+            "BMC Biology", "BMC Ecology and Evolution", "BMC Public Health",
+            "BMC Bioinformatics", "BMC Veterinary Research", "BMC Plant Biology",
+            "BMC Medical Research Methodology"
+          ],
+          "Annual Reviews": [
+            "Annual Review of Ecology, Evolution, and Systematics", "Annual Review of Entomology",
+            "Annual Review of Psychology", "Annual Review of Sociology",
+            "Annual Review of Environment and Resources", "Annual Review of Statistics and Its Application"
+          ],
+          "IOP Publishing": [
+            "Environmental Research Letters", "Journal of Physics A", "Journal of Physics D",
+            "Machine Learning: Science and Technology", "Bioinspiration & Biomimetics"
+          ],
+          "American Association for the Advancement of Science (AAAS)": [
+            "Science", "Science Advances", "Science Translational Medicine",
+            "Science Immunology", "Science Robotics"
+          ]
+        }
+
+        # Inserção no Banco
+        count_pub = 0
+        count_jour = 0
+
+        for pub_name, journals in seed_data.items():
+            # Cria Publisher
+            pub_id = f"pub_{uuid.uuid4().hex[:12]}"
+            await db.publishers.insert_one({
+                "publisher_id": pub_id,
+                "name": pub_name,
+                "is_user_added": False,
+                "is_verified": True,
+                "validated_submission_count": 0,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            count_pub += 1
+
+            # Cria Journals Vinculados
+            journal_docs = []
+            for j_name in journals:
+                journal_docs.append({
+                    "journal_id": f"journal_{uuid.uuid4().hex[:12]}",
+                    "name": j_name,
+                    "publisher_id": pub_id,
+                    "is_user_added": False,
+                    "is_verified": True,
+                    "open_access": None, # Será preenchido pelos usuários ou admin posteriormente
+                    "validated_submission_count": 0,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                })
+            
+            if journal_docs:
+                await db.journals.insert_many(journal_docs)
+                count_jour += len(journal_docs)
+
+        logger.info(f"Database seeding completed! Added {count_pub} publishers and {count_jour} journals.")
+
+    except Exception as e:
+        logger.error(f"Error seeding database: {e}")
+
+# ======================================================================
+# STARTUP EVENT - Executa quando o servidor liga
+# ======================================================================
+@app.on_event("startup")
+async def startup_event():
+    # 1. Garante áreas do CNPq (que já estava no seu código)
+    await ensure_areas_initialized()
+    
+    # 2. Garante revistas iniciais (NOVO)
+    await seed_database()
+
+
+
 # ============== HEALTH CHECK ==============
 
 @api_router.get("/")
