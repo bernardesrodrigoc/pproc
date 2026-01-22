@@ -825,7 +825,7 @@ export default function SubmissionPage() {
 
             {/* Step 6: Evidence Upload */}
             {step === 6 && (
-              <div className="space-y-6" data-testid="step-5">
+              <div className="space-y-6" data-testid="step-6">
                 <div>
                   <Label className="text-stone-700 font-medium mb-2 block">
                     {t('submission.uploadEvidence')}
