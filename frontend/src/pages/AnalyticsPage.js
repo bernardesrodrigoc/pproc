@@ -167,7 +167,7 @@ export default function AnalyticsPage() {
                 <div>
                   <p className="text-sm text-stone-500 mb-1">{t('analytics.totalSubmissions')}</p>
                   <p className="font-serif text-4xl text-stone-900">
-                    {overview?.total_submissions || 0}
+                    {overview?.total_submissions || (overview?.observation_status === 'collecting' ? '--' : 0)}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-stone-100 rounded-xl flex items-center justify-center">
@@ -213,6 +213,51 @@ export default function AnalyticsPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Quality Indices (NEW) - Only shown when available */}
+        {overview?.indices_available && overview?.quality_indices && (
+          <div className="mb-8">
+            <h3 className="font-serif text-lg text-stone-800 mb-4">Quality Assessment Indices</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {overview.quality_indices.average_review_quality && (
+                <Card className="border-stone-200 bg-gradient-to-br from-amber-50 to-white">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-amber-700 mb-1 font-medium">Review Quality</p>
+                    <p className="font-serif text-2xl text-amber-900">{overview.quality_indices.average_review_quality.value}</p>
+                    <Progress value={overview.quality_indices.average_review_quality.value} className="h-1.5 mt-2" />
+                  </CardContent>
+                </Card>
+              )}
+              {overview.quality_indices.feedback_clarity_index && (
+                <Card className="border-stone-200 bg-gradient-to-br from-blue-50 to-white">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-blue-700 mb-1 font-medium">Feedback Clarity</p>
+                    <p className="font-serif text-2xl text-blue-900">{overview.quality_indices.feedback_clarity_index.value}</p>
+                    <Progress value={overview.quality_indices.feedback_clarity_index.value} className="h-1.5 mt-2" />
+                  </CardContent>
+                </Card>
+              )}
+              {overview.quality_indices.decision_fairness_index && (
+                <Card className="border-stone-200 bg-gradient-to-br from-emerald-50 to-white">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-emerald-700 mb-1 font-medium">Decision Fairness</p>
+                    <p className="font-serif text-2xl text-emerald-900">{overview.quality_indices.decision_fairness_index.value}%</p>
+                    <Progress value={overview.quality_indices.decision_fairness_index.value} className="h-1.5 mt-2" />
+                  </CardContent>
+                </Card>
+              )}
+              {overview.quality_indices.recommendation_index && (
+                <Card className="border-stone-200 bg-gradient-to-br from-purple-50 to-white">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-purple-700 mb-1 font-medium">Would Recommend</p>
+                    <p className="font-serif text-2xl text-purple-900">{overview.quality_indices.recommendation_index.value}%</p>
+                    <Progress value={overview.quality_indices.recommendation_index.value} className="h-1.5 mt-2" />
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
