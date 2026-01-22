@@ -688,8 +688,143 @@ export default function SubmissionPage() {
               </div>
             )}
 
-            {/* Step 5: Evidence Upload */}
+            {/* Step 5: Quality Assessment (NEW) */}
             {step === 5 && (
+              <div className="space-y-6" data-testid="step-5">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-blue-800">
+                    These questions help build a comprehensive view of the editorial process. 
+                    Your assessment contributes to understanding both positive and negative aspects.
+                  </p>
+                </div>
+
+                {/* Overall Review Quality */}
+                <div>
+                  <Label className="text-stone-700 font-medium mb-3 block">
+                    Overall Review Quality
+                  </Label>
+                  <p className="text-sm text-stone-500 mb-3">
+                    How would you rate the overall quality of the peer review feedback?
+                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    {options.reviewQualityScale.map(option => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => updateFormData('overall_review_quality', option.value)}
+                        className={`flex-1 py-3 px-2 rounded-lg border-2 transition-all text-center ${
+                          formData.overall_review_quality === option.value
+                            ? 'border-orange-500 bg-orange-50 text-orange-800'
+                            : 'border-stone-200 hover:border-stone-300 text-stone-600'
+                        }`}
+                        data-testid={`quality-${option.value}`}
+                      >
+                        <div className="flex justify-center mb-1">
+                          {[...Array(option.value)].map((_, i) => (
+                            <Star key={i} className={`w-4 h-4 ${formData.overall_review_quality >= option.value ? 'text-orange-500 fill-orange-500' : 'text-stone-300'}`} />
+                          ))}
+                        </div>
+                        <span className="text-xs font-medium">{option.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Feedback Clarity */}
+                <div>
+                  <Label className="text-stone-700 font-medium mb-3 block">
+                    Feedback Clarity
+                  </Label>
+                  <p className="text-sm text-stone-500 mb-3">
+                    How clear and actionable was the feedback provided?
+                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    {options.feedbackClarityScale.map(option => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => updateFormData('feedback_clarity', option.value)}
+                        className={`flex-1 py-3 px-2 rounded-lg border-2 transition-all text-center ${
+                          formData.feedback_clarity === option.value
+                            ? 'border-orange-500 bg-orange-50 text-orange-800'
+                            : 'border-stone-200 hover:border-stone-300 text-stone-600'
+                        }`}
+                        data-testid={`clarity-${option.value}`}
+                      >
+                        <span className="text-sm font-medium">{option.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Decision Fairness */}
+                <div>
+                  <Label className="text-stone-700 font-medium mb-3 block">
+                    Decision Fairness
+                  </Label>
+                  <p className="text-sm text-stone-500 mb-3">
+                    Did the editorial decision align with the feedback received?
+                  </p>
+                  <RadioGroup
+                    value={formData.decision_fairness}
+                    onValueChange={(value) => updateFormData('decision_fairness', value)}
+                    className="flex gap-4"
+                  >
+                    {options.decisionFairnessOptions.map(option => (
+                      <div key={option.id} className="flex-1">
+                        <label
+                          className={`flex items-center justify-center py-3 px-4 rounded-lg border-2 cursor-pointer transition-all ${
+                            formData.decision_fairness === option.id
+                              ? 'border-orange-500 bg-orange-50'
+                              : 'border-stone-200 hover:border-stone-300'
+                          }`}
+                        >
+                          <RadioGroupItem value={option.id} id={`fairness-${option.id}`} className="sr-only" />
+                          <span className={`font-medium ${formData.decision_fairness === option.id ? 'text-orange-800' : 'text-stone-600'}`}>
+                            {option.label}
+                          </span>
+                        </label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+
+                {/* Would Recommend */}
+                <div>
+                  <Label className="text-stone-700 font-medium mb-3 block">
+                    Would Recommend
+                  </Label>
+                  <p className="text-sm text-stone-500 mb-3">
+                    Based on the editorial process, would you recommend this journal to colleagues?
+                  </p>
+                  <RadioGroup
+                    value={formData.would_recommend}
+                    onValueChange={(value) => updateFormData('would_recommend', value)}
+                    className="flex gap-4"
+                  >
+                    {options.wouldRecommendOptions.map(option => (
+                      <div key={option.id} className="flex-1">
+                        <label
+                          className={`flex items-center justify-center py-3 px-4 rounded-lg border-2 cursor-pointer transition-all ${
+                            formData.would_recommend === option.id
+                              ? 'border-orange-500 bg-orange-50'
+                              : 'border-stone-200 hover:border-stone-300'
+                          }`}
+                        >
+                          <RadioGroupItem value={option.id} id={`recommend-${option.id}`} className="sr-only" />
+                          <span className={`font-medium ${formData.would_recommend === option.id ? 'text-orange-800' : 'text-stone-600'}`}>
+                            {option.label}
+                          </span>
+                        </label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+              </div>
+            )}
+
+            {/* Step 6: Evidence Upload */}
+            {step === 6 && (
               <div className="space-y-6" data-testid="step-5">
                 <div>
                   <Label className="text-stone-700 font-medium mb-2 block">
