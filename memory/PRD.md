@@ -190,10 +190,12 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 - [ ] Integration with journal databases
 
 ## Next Tasks
-1. Implement journal normalization workflow for user-added entries
-2. Add email notifications for submission validation
-3. Export analytics data functionality (CSV/JSON)
-4. Optional account linking for users with both Google and ORCID
+1. Admin: Manage CNPq hierarchical areas (edit, activate/deactivate)
+2. Implement journal normalization workflow for user-added entries
+3. Add email notifications for submission validation
+4. Export analytics data functionality (CSV/JSON)
+5. Optional account linking for users with both Google and ORCID
+6. Fix admin dashboard screenshot test (authentication issue)
 
 ## Completed This Session (Jan 22, 2026)
 - ✅ ORCID OAuth 2.0 fix - now uses environment-driven redirect_uri
@@ -210,4 +212,13 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
   - New Quality Indices: Average Review Quality, Feedback Clarity Index, Decision Fairness Index, Recommendation Index
   - Submission validation with `valid_for_stats` flag (completeness, consistency, duplicate detection)
   - Institutional/neutral Portuguese messaging throughout
-- ✅ All 14 new backend tests passing (100%)
+- ✅ **CNPq Hierarchical Scientific Areas** (NEW):
+  - 9 Grande Áreas, ~80 Áreas, ~400 Subáreas based on official CNPq table
+  - Cascading dropdowns in Step 1: Grande Área → Área → Subárea
+  - New endpoints: /api/options/cnpq/grande-areas, /areas/{code}, /subareas/{code}, /lookup/{code}
+  - Backwards compatible with legacy scientific_area field
+- ✅ **Conditional Form Logic** (NEW):
+  - Open Access question controls APC visibility (Step 3)
+  - Editor comments quality only appears if editor provided comments (Step 4)
+  - Backend validation rejects logically inconsistent submissions
+- ✅ All 26 backend tests passing (100%) - iteration_7.json
