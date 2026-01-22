@@ -165,4 +165,10 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 - ✅ Visibility banner on analytics page (professional messaging)
 - ✅ Sample data flagged with is_sample=true for clean separation
 - ✅ Trust score confirmed starting at 0 for new users
-- ✅ All 28 backend tests passing (100%)
+- ✅ **Quality Assessment System** - New neutral fields capturing positive/neutral/negative experiences:
+  - Form now has 6 steps (Step 5: Quality Assessment)
+  - New fields: overall_review_quality (1-5), feedback_clarity (1-5), decision_fairness, would_recommend
+  - New Quality Indices: Average Review Quality, Feedback Clarity Index, Decision Fairness Index, Recommendation Index
+  - Submission validation with `valid_for_stats` flag (completeness, consistency, duplicate detection)
+  - Institutional/neutral Portuguese messaging throughout
+- ✅ All 14 new backend tests passing (100%)
