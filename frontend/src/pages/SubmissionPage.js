@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
 import { Checkbox } from '../components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Progress } from '../components/ui/progress';
+import { Slider } from '../components/ui/slider';
 import { 
   ChevronRight, 
   ChevronLeft, 
@@ -19,7 +20,8 @@ import {
   FileText,
   Shield,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Star
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -48,6 +50,11 @@ export default function SubmissionPage() {
     review_comments: [],
     editor_comments: '',
     perceived_coherence: '',
+    // NEW: Quality assessment fields
+    overall_review_quality: null,
+    feedback_clarity: null,
+    decision_fairness: '',
+    would_recommend: '',
     // Custom journal/publisher fields
     custom_publisher_name: '',
     custom_journal_name: '',
@@ -70,7 +77,12 @@ export default function SubmissionPage() {
     editorCommentTypes: [],
     coherenceOptions: [],
     publishers: [],
-    journals: []
+    journals: [],
+    // NEW: Quality assessment options
+    reviewQualityScale: [],
+    feedbackClarityScale: [],
+    decisionFairnessOptions: [],
+    wouldRecommendOptions: []
   });
 
   // Fetch options on mount
