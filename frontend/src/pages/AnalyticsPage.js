@@ -38,6 +38,36 @@ const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
 const CHART_COLORS = ['#c2410c', '#ea580c', '#fb923c', '#fdba74', '#ffedd5'];
 
+// Helper functions moved outside component
+const getScoreClass = (score) => {
+  if (score >= 70) return 'bg-emerald-100 text-emerald-800';
+  if (score >= 40) return 'bg-amber-100 text-amber-800';
+  return 'bg-red-100 text-red-800';
+};
+
+const getScoreIcon = (score) => {
+  if (score >= 70) return <TrendingUp className="w-4 h-4" />;
+  if (score >= 40) return <Minus className="w-4 h-4" />;
+  return <TrendingDown className="w-4 h-4" />;
+};
+
+// ScoreCard component moved outside to prevent recreation on each render
+const ScoreCard = ({ label, description, score }) => (
+  <div className="bg-white border border-stone-200 rounded-lg p-4">
+    <div className="flex items-start justify-between mb-2">
+      <div>
+        <p className="text-sm font-medium text-stone-700">{label}</p>
+        <p className="text-xs text-stone-500 mt-1">{description}</p>
+      </div>
+      <Badge className={getScoreClass(score)}>
+        {getScoreIcon(score)}
+        <span className="ml-1">{score.toFixed(0)}</span>
+      </Badge>
+    </div>
+    <Progress value={score} className="h-2" />
+  </div>
+);
+
 export default function AnalyticsPage() {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('overview');
