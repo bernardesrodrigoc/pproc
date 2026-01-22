@@ -106,11 +106,11 @@ export default function SubmissionPage() {
       setLoading(true);
       try {
         const [
-          areas, types, decisions, reviewers, times, apcs, 
+          grandeAreas, types, decisions, reviewers, times, apcs, 
           reviewComments, editorComments, coherence, publishers,
           reviewQuality, feedbackClarity, fairness, recommend
         ] = await Promise.all([
-          fetch(`${API}/options/scientific-areas`).then(r => r.json()),
+          fetch(`${API}/options/cnpq/grande-areas`).then(r => r.json()),
           fetch(`${API}/options/manuscript-types`).then(r => r.json()),
           fetch(`${API}/options/decision-types`).then(r => r.json()),
           fetch(`${API}/options/reviewer-counts`).then(r => r.json()),
@@ -126,8 +126,9 @@ export default function SubmissionPage() {
           fetch(`${API}/options/would-recommend`).then(r => r.json())
         ]);
         
+        setCnpqOptions(prev => ({ ...prev, grandeAreas }));
         setOptions({
-          scientificAreas: areas,
+          scientificAreas: grandeAreas, // Legacy compatibility
           manuscriptTypes: types,
           decisionTypes: decisions,
           reviewerCounts: reviewers,
@@ -152,6 +153,40 @@ export default function SubmissionPage() {
     
     fetchOptions();
   }, []);
+
+  // Fetch CNPq Áreas when Grande Área changes
+  useEffect(() => {
+    const fetchAreas = async () => {
+      if (formData.scientific_area_grande) {
+        try {
+          const areas = await fetch(`${API}/options/cnpq/areas/${formData.scientific_area_grande}`).then(r => r.json());
+          setCnpqOptions(prev => ({ ...prev, areas, subareas: [] }));
+        } catch (err) {
+          console.error('Failed to fetch CNPq areas:', err);
+        }
+      } else {
+        setCnpqOptions(prev => ({ ...prev, areas: [], subareas: [] }));
+      }
+    };
+    fetchAreas();
+  }, [formData.scientific_area_grande]);
+
+  // Fetch CNPq Subáreas when Área changes
+  useEffect(() => {
+    const fetchSubareas = async () => {
+      if (formData.scientific_area_area) {
+        try {
+          const subareas = await fetch(`${API}/options/cnpq/subareas/${formData.scientific_area_area}`).then(r => r.json());
+          setCnpqOptions(prev => ({ ...prev, subareas }));
+        } catch (err) {
+          console.error('Failed to fetch CNPq subareas:', err);
+        }
+      } else {
+        setCnpqOptions(prev => ({ ...prev, subareas: [] }));
+      }
+    };
+    fetchSubareas();
+  }, [formData.scientific_area_area]);
 
   // Fetch journals when publisher changes
   useEffect(() => {
