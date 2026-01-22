@@ -208,6 +208,70 @@ export default function AdminPage() {
     fetchSubareas();
   }, [selectedArea]);
 
+  // Fetch diagnostics
+  useEffect(() => {
+    const fetchDiagnostics = async () => {
+      setLoadingDiagnostics(true);
+      try {
+        const response = await fetch(`${API}/admin/diagnostics`, { credentials: 'include' });
+        if (response.ok) {
+          const data = await response.json();
+          setDiagnostics(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch diagnostics:', error);
+      }
+      setLoadingDiagnostics(false);
+    };
+
+    if (isAdmin && activeTab === 'settings') {
+      fetchDiagnostics();
+    }
+  }, [isAdmin, activeTab]);
+
+  // Area management functions
+  const handleToggleAreaActive = async (code, currentActive) => {
+    try {
+      const response = await fetch(`${API}/admin/areas/${code}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ is_active: !currentActive })
+      });
+      if (response.ok) {
+        // Refresh areas
+        const refreshResponse = await fetch(`${API}/options/cnpq/grande-areas`);
+        if (refreshResponse.ok) {
+          setGrandeAreas(await refreshResponse.json());
+        }
+      }
+    } catch (error) {
+      console.error('Failed to toggle area:', error);
+    }
+  };
+
+  const handleCreateArea = async () => {
+    try {
+      const response = await fetch(`${API}/admin/areas`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(newAreaForm)
+      });
+      if (response.ok) {
+        setShowNewAreaModal(false);
+        setNewAreaForm({ code: '', name: '', name_en: '', level: '', parent_code: '' });
+        // Refresh areas
+        const refreshResponse = await fetch(`${API}/options/cnpq/grande-areas`);
+        if (refreshResponse.ok) {
+          setGrandeAreas(await refreshResponse.json());
+        }
+      }
+    } catch (error) {
+      console.error('Failed to create area:', error);
+    }
+  };
+
   // Fetch submissions
   useEffect(() => {
     const fetchSubmissions = async () => {
