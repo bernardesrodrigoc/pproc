@@ -736,23 +736,57 @@ export default function SubmissionPage() {
                   </RadioGroup>
                 </div>
 
+                {/* CONDITIONAL: Open Access Question */}
                 <div>
                   <Label className="text-stone-700 font-medium mb-3 block">
-                    {t('submission.apcRange')}
+                    O periódico é Open Access?
                   </Label>
                   <RadioGroup 
-                    value={formData.apc_range}
-                    onValueChange={(v) => updateFormData('apc_range', v)}
-                    className="grid grid-cols-2 gap-4"
+                    value={formData.journal_is_open_access === true ? 'yes' : formData.journal_is_open_access === false ? 'no' : ''}
+                    onValueChange={(v) => {
+                      const isOpenAccess = v === 'yes';
+                      updateFormData('journal_is_open_access', isOpenAccess);
+                      // Reset APC if not open access
+                      if (!isOpenAccess) {
+                        updateFormData('apc_range', 'no_apc');
+                      }
+                    }}
+                    className="flex space-x-6"
                   >
-                    {options.apcRanges.map(range => (
-                      <div key={range.id} className="flex items-center space-x-2">
-                        <RadioGroupItem value={range.id} id={`apc-${range.id}`} />
-                        <Label htmlFor={`apc-${range.id}`} className="cursor-pointer">{range.name}</Label>
-                      </div>
-                    ))}
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="yes" id="open-access-yes" data-testid="open-access-yes" />
+                      <Label htmlFor="open-access-yes" className="cursor-pointer">Sim</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="no" id="open-access-no" data-testid="open-access-no" />
+                      <Label htmlFor="open-access-no" className="cursor-pointer">Não</Label>
+                    </div>
                   </RadioGroup>
                 </div>
+
+                {/* CONDITIONAL: APC Range - Only show if Open Access */}
+                {formData.journal_is_open_access === true && (
+                  <div className="border-l-4 border-amber-400 pl-4 bg-amber-50/50 py-4 rounded-r">
+                    <Label className="text-stone-700 font-medium mb-3 block">
+                      {t('submission.apcRange')}
+                    </Label>
+                    <p className="text-sm text-stone-500 mb-3">
+                      Taxa de Processamento de Artigo (APC) cobrada pelo periódico
+                    </p>
+                    <RadioGroup 
+                      value={formData.apc_range}
+                      onValueChange={(v) => updateFormData('apc_range', v)}
+                      className="grid grid-cols-2 gap-4"
+                    >
+                      {options.apcRanges.filter(r => r.id !== 'no_apc').map(range => (
+                        <div key={range.id} className="flex items-center space-x-2">
+                          <RadioGroupItem value={range.id} id={`apc-${range.id}`} />
+                          <Label htmlFor={`apc-${range.id}`} className="cursor-pointer">{range.name}</Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </div>
+                )}
               </div>
             )}
 
