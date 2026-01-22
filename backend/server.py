@@ -1485,22 +1485,48 @@ async def get_my_insights(request: Request):
 
 # ============== FORM OPTIONS ==============
 
+# Import CNPq hierarchical areas
+from data.cnpq_areas import get_grande_areas, get_areas, get_subareas, get_area_by_code
+
 @api_router.get("/options/scientific-areas")
 async def get_scientific_areas():
-    """Get list of scientific areas"""
+    """Get list of scientific areas (legacy - returns Grande Áreas for backwards compatibility)"""
+    # Return Grande Áreas in legacy format for backwards compatibility
+    grande_areas = get_grande_areas()
     return [
-        {"id": "life_sciences", "name": "Life Sciences"},
-        {"id": "physical_sciences", "name": "Physical Sciences"},
-        {"id": "earth_environmental", "name": "Earth & Environmental Sciences"},
-        {"id": "health_sciences", "name": "Health Sciences"},
-        {"id": "social_sciences", "name": "Social Sciences"},
-        {"id": "humanities", "name": "Humanities"},
-        {"id": "engineering", "name": "Engineering & Technology"},
-        {"id": "mathematics", "name": "Mathematics & Statistics"},
-        {"id": "computer_science", "name": "Computer Science"},
-        {"id": "agriculture", "name": "Agriculture & Food Sciences"},
-        {"id": "interdisciplinary", "name": "Interdisciplinary"}
+        {"id": ga["code"], "name": ga["name"], "name_en": ga["name_en"]}
+        for ga in grande_areas
     ]
+
+# ============== CNPq HIERARCHICAL AREAS ==============
+
+@api_router.get("/options/cnpq/grande-areas")
+async def get_cnpq_grande_areas():
+    """Get list of CNPq Grande Áreas (top level)"""
+    return get_grande_areas()
+
+@api_router.get("/options/cnpq/areas/{grande_area_code}")
+async def get_cnpq_areas(grande_area_code: str):
+    """Get list of CNPq Áreas for a given Grande Área"""
+    areas = get_areas(grande_area_code)
+    if not areas:
+        raise HTTPException(status_code=404, detail="Grande Área not found")
+    return areas
+
+@api_router.get("/options/cnpq/subareas/{area_code}")
+async def get_cnpq_subareas(area_code: str):
+    """Get list of CNPq Subáreas for a given Área"""
+    subareas = get_subareas(area_code)
+    # Note: Some áreas don't have subáreas, so empty list is valid
+    return subareas
+
+@api_router.get("/options/cnpq/lookup/{code}")
+async def get_cnpq_area_lookup(code: str):
+    """Lookup CNPq area by full code (e.g., '1.01.02')"""
+    area = get_area_by_code(code)
+    if not area:
+        raise HTTPException(status_code=404, detail="Area code not found")
+    return area
 
 @api_router.get("/options/manuscript-types")
 async def get_manuscript_types():
