@@ -287,6 +287,35 @@ async def seed_sample_submissions(count: int = 500):
         else:
             coherence = random.choices(COHERENCE_OPTIONS, weights=[0.5, 0.35, 0.15])[0]
         
+        # NEW: Quality assessment fields (realistic distributions)
+        # Review quality correlates with reviewer engagement
+        if reviewer_count == "2+":
+            review_quality = random.choices([1, 2, 3, 4, 5], weights=[0.05, 0.1, 0.25, 0.35, 0.25])[0]
+        elif reviewer_count == "1":
+            review_quality = random.choices([1, 2, 3, 4, 5], weights=[0.1, 0.2, 0.35, 0.25, 0.1])[0]
+        else:
+            review_quality = random.choices([1, 2, 3, 4, 5], weights=[0.3, 0.3, 0.25, 0.1, 0.05])[0]
+        
+        # Feedback clarity correlates with review quality
+        feedback_clarity = min(5, max(1, review_quality + random.randint(-1, 1)))
+        
+        # Decision fairness - correlates with coherence
+        if coherence == "yes":
+            fairness = random.choices(["agree", "neutral", "disagree"], weights=[0.7, 0.2, 0.1])[0]
+        elif coherence == "partially":
+            fairness = random.choices(["agree", "neutral", "disagree"], weights=[0.3, 0.4, 0.3])[0]
+        else:
+            fairness = random.choices(["agree", "neutral", "disagree"], weights=[0.1, 0.3, 0.6])[0]
+        
+        # Would recommend - correlates with overall experience
+        avg_quality = (review_quality + feedback_clarity) / 2
+        if avg_quality >= 4:
+            recommend = random.choices(["yes", "neutral", "no"], weights=[0.6, 0.3, 0.1])[0]
+        elif avg_quality >= 3:
+            recommend = random.choices(["yes", "neutral", "no"], weights=[0.3, 0.4, 0.3])[0]
+        else:
+            recommend = random.choices(["yes", "neutral", "no"], weights=[0.1, 0.3, 0.6])[0]
+        
         submission = {
             "submission_id": f"sub_sample_{uuid.uuid4().hex[:12]}",
             "user_hashed_id": random.choice(sample_users),
@@ -301,9 +330,16 @@ async def seed_sample_submissions(count: int = 500):
             "review_comments": review_comments,
             "editor_comments": editor_comments,
             "perceived_coherence": coherence,
+            # NEW: Quality assessment fields
+            "overall_review_quality": review_quality,
+            "feedback_clarity": feedback_clarity,
+            "decision_fairness": fairness,
+            "would_recommend": recommend,
+            # Metadata
             "evidence_file_id": None,
             "status": "validated",
             "is_sample": True,  # CRITICAL: Flag as sample data
+            "valid_for_stats": True,
             "created_at": (datetime.now(timezone.utc) - timedelta(days=random.randint(1, 365))).isoformat()
         }
         submissions.append(submission)
