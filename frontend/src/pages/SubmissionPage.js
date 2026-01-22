@@ -361,6 +361,9 @@ export default function SubmissionPage() {
                     setSuccess(false);
                     setStep(1);
                     setFormData({
+                      scientific_area_grande: '',
+                      scientific_area_area: '',
+                      scientific_area_subarea: '',
                       scientific_area: '',
                       manuscript_type: '',
                       publisher_id: '',
@@ -371,8 +374,19 @@ export default function SubmissionPage() {
                       apc_range: '',
                       review_comments: [],
                       editor_comments: '',
-                      perceived_coherence: ''
+                      perceived_coherence: '',
+                      overall_review_quality: null,
+                      feedback_clarity: null,
+                      decision_fairness: '',
+                      would_recommend: '',
+                      custom_publisher_name: '',
+                      custom_journal_name: '',
+                      custom_journal_open_access: null,
+                      custom_journal_apc_required: '',
+                      journal_is_open_access: null,
+                      editor_comments_quality: null
                     });
+                    setCnpqOptions(prev => ({ ...prev, areas: [], subareas: [] }));
                     setEvidenceFile(null);
                   }}
                   className="bg-stone-900 text-white hover:bg-stone-800"
