@@ -24,8 +24,7 @@ import "./App.css";
 function AppRouter() {
   const location = useLocation();
   
-  // Check URL fragment for session_id (handles Google OAuth callback)
-  // This synchronous check prevents race conditions
+  // MANTENHA: Isso garante que se o Google mandar o hash, o AuthCallback roda
   if (location.hash?.includes('session_id=')) {
     return <AuthCallback />;
   }
@@ -37,6 +36,10 @@ function AppRouter() {
       <Route path="/analytics" element={<AnalyticsPage />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
+      
+      {/* --- ADICIONE ESTA ROTA AQUI --- */}
+      {/* Isso garante que o AuthContext tenha para onde redirecionar sem ser protegido */}
+      <Route path="/auth/callback" element={<AuthCallback />} />
       
       {/* ORCID OAuth Callback */}
       <Route path="/auth/orcid/callback" element={<OrcidCallback />} />
