@@ -1144,9 +1144,19 @@ async def get_journal_analytics(publisher_id: Optional[str] = None):
 
 @api_router.get("/analytics/areas")
 async def get_area_analytics():
-    """Get scientific area analytics"""
+    """Get scientific area analytics (respects visibility settings)"""
+    settings = await get_platform_settings()
+    base_query = await get_submission_base_query(settings)
+    
+    # Check visibility mode
+    mode = settings.get("visibility_mode", "user_only")
+    public_enabled = settings.get("public_stats_enabled", False)
+    
+    if mode == "user_only" and not public_enabled:
+        return []  # No public area stats in user_only mode
+    
     pipeline = [
-        {"$match": {"status": {"$ne": "flagged"}}},
+        {"$match": base_query},
         {"$group": {
             "_id": "$scientific_area",
             "total_cases": {"$sum": 1},
@@ -1168,6 +1178,88 @@ async def get_area_analytics():
         "fast_decision_rate": round((r["fast_decisions"] / r["total_cases"]) * 100, 1),
         "slow_decision_rate": round((r["slow_decisions"] / r["total_cases"]) * 100, 1)
     } for r in results]
+
+# ============== USER PERSONAL INSIGHTS ==============
+
+@api_router.get("/users/my-insights")
+async def get_my_insights(request: Request):
+    """Get personal aggregated insights for the current user
+    
+    This allows users to see value from their contributions even when
+    public statistics are not yet available.
+    """
+    user = await require_auth(request)
+    
+    # Get user's submissions (real data only, not sample)
+    user_submissions = await db.submissions.find(
+        {"user_hashed_id": user.hashed_id, "is_sample": {"$ne": True}},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    if not user_submissions:
+        return {
+            "has_data": False,
+            "message": "Submit your first editorial decision to start seeing your personal insights."
+        }
+    
+    total = len(user_submissions)
+    validated = sum(1 for s in user_submissions if s.get("status") == "validated")
+    pending = sum(1 for s in user_submissions if s.get("status") == "pending")
+    
+    # Calculate personal metrics
+    no_peer_review = sum(1 for s in user_submissions if s.get("reviewer_count") == "0")
+    single_reviewer = sum(1 for s in user_submissions if s.get("reviewer_count") == "1")
+    desk_rejects = sum(1 for s in user_submissions if s.get("decision_type") == "desk_reject")
+    
+    # Time distribution
+    fast_decisions = sum(1 for s in user_submissions if s.get("time_to_decision") == "0-30")
+    medium_decisions = sum(1 for s in user_submissions if s.get("time_to_decision") == "31-90")
+    slow_decisions = sum(1 for s in user_submissions if s.get("time_to_decision") == "90+")
+    
+    # Group by journal
+    journals_submitted = {}
+    for s in user_submissions:
+        jid = s.get("journal_id")
+        if jid not in journals_submitted:
+            journals_submitted[jid] = 0
+        journals_submitted[jid] += 1
+    
+    # Get journal names
+    top_journals = []
+    for jid, count in sorted(journals_submitted.items(), key=lambda x: -x[1])[:5]:
+        journal = await db.journals.find_one({"journal_id": jid}, {"_id": 0, "name": 1})
+        if journal:
+            top_journals.append({"name": journal["name"], "count": count})
+    
+    # Group by scientific area
+    areas_submitted = {}
+    for s in user_submissions:
+        area = s.get("scientific_area")
+        if area not in areas_submitted:
+            areas_submitted[area] = 0
+        areas_submitted[area] += 1
+    
+    return {
+        "has_data": True,
+        "summary": {
+            "total_submissions": total,
+            "validated": validated,
+            "pending": pending,
+            "contribution_impact": "Your submissions contribute to improving transparency in scholarly publishing."
+        },
+        "insights": {
+            "no_peer_review_rate": round((no_peer_review / total) * 100, 1) if total > 0 else 0,
+            "single_reviewer_rate": round((single_reviewer / total) * 100, 1) if total > 0 else 0,
+            "desk_reject_rate": round((desk_rejects / total) * 100, 1) if total > 0 else 0
+        },
+        "time_distribution": {
+            "fast_0_30_days": round((fast_decisions / total) * 100, 1) if total > 0 else 0,
+            "medium_31_90_days": round((medium_decisions / total) * 100, 1) if total > 0 else 0,
+            "slow_90_plus_days": round((slow_decisions / total) * 100, 1) if total > 0 else 0
+        },
+        "top_journals": top_journals,
+        "areas_distribution": areas_submitted
+    }
 
 # ============== FORM OPTIONS ==============
 
