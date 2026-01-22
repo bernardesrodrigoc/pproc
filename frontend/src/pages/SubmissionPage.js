@@ -754,7 +754,7 @@ export default function SubmissionPage() {
                 {/* CONDITIONAL: Open Access Question */}
                 <div>
                   <Label className="text-stone-700 font-medium mb-3 block">
-                    O periódico é Open Access?
+                    {t('submission.journalOpenAccess')}
                   </Label>
                   <RadioGroup 
                     value={formData.journal_is_open_access === true ? 'yes' : formData.journal_is_open_access === false ? 'no' : ''}
@@ -770,11 +770,11 @@ export default function SubmissionPage() {
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="yes" id="open-access-yes" data-testid="open-access-yes" />
-                      <Label htmlFor="open-access-yes" className="cursor-pointer">Sim</Label>
+                      <Label htmlFor="open-access-yes" className="cursor-pointer">{t('submission.yes')}</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="no" id="open-access-no" data-testid="open-access-no" />
-                      <Label htmlFor="open-access-no" className="cursor-pointer">Não</Label>
+                      <Label htmlFor="open-access-no" className="cursor-pointer">{t('submission.no')}</Label>
                     </div>
                   </RadioGroup>
                 </div>
@@ -786,7 +786,7 @@ export default function SubmissionPage() {
                       {t('submission.apcRange')}
                     </Label>
                     <p className="text-sm text-stone-500 mb-3">
-                      Taxa de Processamento de Artigo (APC) cobrada pelo periódico
+                      {t('submission.apcDesc')}
                     </p>
                     <RadioGroup 
                       value={formData.apc_range}
