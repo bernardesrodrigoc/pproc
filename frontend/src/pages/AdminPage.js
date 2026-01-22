@@ -97,6 +97,33 @@ export default function AdminPage() {
     }
   }, [isAdmin]);
 
+  // Fetch platform settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const [settingsRes, dataStatsRes] = await Promise.all([
+          fetch(`${API}/admin/settings`, { credentials: 'include' }),
+          fetch(`${API}/admin/data/stats`, { credentials: 'include' })
+        ]);
+        
+        if (settingsRes.ok) {
+          const settings = await settingsRes.json();
+          setPlatformSettings(settings);
+        }
+        if (dataStatsRes.ok) {
+          const stats = await dataStatsRes.json();
+          setDataStats(stats);
+        }
+      } catch (error) {
+        console.error('Failed to fetch settings:', error);
+      }
+    };
+
+    if (isAdmin && activeTab === 'settings') {
+      fetchSettings();
+    }
+  }, [isAdmin, activeTab]);
+
   // Fetch submissions
   useEffect(() => {
     const fetchSubmissions = async () => {
