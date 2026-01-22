@@ -457,16 +457,16 @@ export default function SubmissionPage() {
                 {/* CNPq Hierarchical Scientific Areas */}
                 <div className="space-y-4">
                   <Label className="text-stone-700 font-medium mb-1 block">
-                    Área Científica (CNPq)
+                    {t('submission.scientificAreaTitle')}
                   </Label>
                   <p className="text-sm text-stone-500 mb-3">
-                    Selecione sua área de conhecimento seguindo a hierarquia do CNPq
+                    {t('submission.scientificAreaDesc')}
                   </p>
                   
                   {/* Grande Área */}
                   <div>
                     <Label className="text-stone-600 text-sm mb-2 block">
-                      Grande Área *
+                      {t('submission.grandeArea')} *
                     </Label>
                     <Select 
                       value={formData.scientific_area_grande} 
@@ -477,7 +477,7 @@ export default function SubmissionPage() {
                       }}
                     >
                       <SelectTrigger className="w-full" data-testid="grande-area-select">
-                        <SelectValue placeholder="Selecione a Grande Área..." />
+                        <SelectValue placeholder={t('submission.grandeAreaPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {cnpqOptions.grandeAreas.map(ga => (
@@ -493,7 +493,7 @@ export default function SubmissionPage() {
                   {formData.scientific_area_grande && (
                     <div>
                       <Label className="text-stone-600 text-sm mb-2 block">
-                        Área *
+                        {t('submission.area')} *
                       </Label>
                       <Select 
                         value={formData.scientific_area_area} 
@@ -503,7 +503,7 @@ export default function SubmissionPage() {
                         }}
                       >
                         <SelectTrigger className="w-full" data-testid="area-select">
-                          <SelectValue placeholder="Selecione a Área..." />
+                          <SelectValue placeholder={t('submission.areaPlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
                           {cnpqOptions.areas.map(area => (
@@ -520,14 +520,14 @@ export default function SubmissionPage() {
                   {formData.scientific_area_area && cnpqOptions.subareas.length > 0 && (
                     <div>
                       <Label className="text-stone-600 text-sm mb-2 block">
-                        Subárea (opcional)
+                        {t('submission.subarea')}
                       </Label>
                       <Select 
                         value={formData.scientific_area_subarea} 
                         onValueChange={(v) => updateFormData('scientific_area_subarea', v)}
                       >
                         <SelectTrigger className="w-full" data-testid="subarea-select">
-                          <SelectValue placeholder="Selecione a Subárea (opcional)..." />
+                          <SelectValue placeholder={t('submission.subareaPlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
                           {cnpqOptions.subareas.map(subarea => (
