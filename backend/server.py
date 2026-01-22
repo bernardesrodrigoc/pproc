@@ -1368,6 +1368,48 @@ async def get_coherence_options():
         {"id": "no", "name": "No"}
     ]
 
+# NEW: Quality assessment options (neutral language, captures positive/neutral/negative)
+
+@api_router.get("/options/review-quality-scale")
+async def get_review_quality_scale():
+    """Get overall review quality scale (1-5)"""
+    return [
+        {"id": 1, "value": 1, "label": "Very Low", "description": "Review provided minimal useful feedback"},
+        {"id": 2, "value": 2, "label": "Low", "description": "Review had significant gaps"},
+        {"id": 3, "value": 3, "label": "Average", "description": "Review met basic expectations"},
+        {"id": 4, "value": 4, "label": "High", "description": "Review was thorough and helpful"},
+        {"id": 5, "value": 5, "label": "Very High", "description": "Review was exceptional in quality"}
+    ]
+
+@api_router.get("/options/feedback-clarity-scale")
+async def get_feedback_clarity_scale():
+    """Get feedback clarity scale (1-5)"""
+    return [
+        {"id": 1, "value": 1, "label": "Very Unclear", "description": "Feedback was difficult to understand or act upon"},
+        {"id": 2, "value": 2, "label": "Unclear", "description": "Feedback lacked clarity in several areas"},
+        {"id": 3, "value": 3, "label": "Neutral", "description": "Feedback was understandable but not detailed"},
+        {"id": 4, "value": 4, "label": "Clear", "description": "Feedback was mostly clear and actionable"},
+        {"id": 5, "value": 5, "label": "Very Clear", "description": "Feedback was highly clear and actionable"}
+    ]
+
+@api_router.get("/options/decision-fairness")
+async def get_decision_fairness_options():
+    """Get decision fairness perception options"""
+    return [
+        {"id": "agree", "label": "Agree", "description": "The decision aligned with the review feedback"},
+        {"id": "neutral", "label": "Neutral", "description": "No strong opinion on the alignment"},
+        {"id": "disagree", "label": "Disagree", "description": "The decision did not align with the review feedback"}
+    ]
+
+@api_router.get("/options/would-recommend")
+async def get_would_recommend_options():
+    """Get recommendation options based on editorial process"""
+    return [
+        {"id": "yes", "label": "Yes", "description": "Would recommend based on the editorial process"},
+        {"id": "neutral", "label": "Neutral", "description": "No strong recommendation either way"},
+        {"id": "no", "label": "No", "description": "Would not recommend based on the editorial process"}
+    ]
+
 # ============== ADMIN ENDPOINTS ==============
 
 # --- Platform Settings ---
