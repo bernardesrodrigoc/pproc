@@ -675,6 +675,140 @@ export default function AdminPage() {
             )}
           </TabsContent>
 
+          {/* Areas Management Tab */}
+          <TabsContent value="areas" data-testid="areas-tab">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-serif flex items-center">
+                    <FolderTree className="w-5 h-5 mr-2" />
+                    Scientific Areas Hierarchy
+                  </CardTitle>
+                  <CardDescription>
+                    View and manage the hierarchical classification of scientific areas
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingAreas ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-stone-400" />
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Grande Área Selection */}
+                      <div>
+                        <Label className="text-stone-700 font-medium mb-2 block">
+                          Major Area (Grande Área)
+                        </Label>
+                        <Select 
+                          value={selectedGrandeArea || ''} 
+                          onValueChange={(v) => setSelectedGrandeArea(v)}
+                        >
+                          <SelectTrigger data-testid="admin-grande-area-select">
+                            <SelectValue placeholder="Select a Major Area to view its structure..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {grandeAreas.map(ga => (
+                              <SelectItem key={ga.code} value={ga.code}>
+                                <span className="font-medium">{ga.code}.</span> {ga.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Areas List */}
+                      {selectedGrandeArea && areas.length > 0 && (
+                        <div>
+                          <Label className="text-stone-700 font-medium mb-2 block">
+                            Areas ({areas.length})
+                          </Label>
+                          <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
+                            {areas.map(area => (
+                              <div 
+                                key={area.code}
+                                className={`p-3 flex items-center justify-between cursor-pointer hover:bg-stone-50 transition-colors ${
+                                  selectedArea === area.code ? 'bg-stone-100' : ''
+                                }`}
+                                onClick={() => setSelectedArea(area.code)}
+                              >
+                                <div>
+                                  <span className="font-mono text-xs text-stone-400 mr-2">{area.code}</span>
+                                  <span className="text-stone-800">{area.name}</span>
+                                </div>
+                                <Badge variant="outline" className="text-xs">
+                                  {area.name_en}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Subareas List */}
+                      {selectedArea && (
+                        <div>
+                          <Label className="text-stone-700 font-medium mb-2 block">
+                            Subareas ({subareas.length})
+                          </Label>
+                          {subareas.length > 0 ? (
+                            <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
+                              {subareas.map(subarea => (
+                                <div 
+                                  key={subarea.code}
+                                  className="p-3 flex items-center justify-between hover:bg-stone-50"
+                                >
+                                  <div>
+                                    <span className="font-mono text-xs text-stone-400 mr-2">{subarea.code}</span>
+                                    <span className="text-stone-800">{subarea.name}</span>
+                                  </div>
+                                  <Badge variant="outline" className="text-xs">
+                                    {subarea.name_en}
+                                  </Badge>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-stone-500 italic py-4">
+                              This area has no subareas defined.
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Statistics Summary */}
+                      <div className="border-t pt-4 mt-4">
+                        <h4 className="font-medium text-stone-700 mb-3">Hierarchy Summary</h4>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="text-center p-3 bg-stone-50 rounded-lg">
+                            <p className="text-2xl font-bold text-stone-900">{grandeAreas.length}</p>
+                            <p className="text-xs text-stone-500">Major Areas</p>
+                          </div>
+                          <div className="text-center p-3 bg-stone-50 rounded-lg">
+                            <p className="text-2xl font-bold text-stone-900">{areas.length || '—'}</p>
+                            <p className="text-xs text-stone-500">Areas</p>
+                          </div>
+                          <div className="text-center p-3 bg-stone-50 rounded-lg">
+                            <p className="text-2xl font-bold text-stone-900">{subareas.length || '—'}</p>
+                            <p className="text-xs text-stone-500">Subareas</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Info Note */}
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p className="text-sm text-blue-800">
+                          <strong>Note:</strong> The scientific areas hierarchy is based on the official classification 
+                          and is currently read-only. To modify the hierarchy structure, contact system administrators.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
           {/* Settings Tab */}
           <TabsContent value="settings" data-testid="settings-tab">
             <div className="grid gap-6 md:grid-cols-2">
