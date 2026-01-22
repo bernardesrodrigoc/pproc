@@ -70,6 +70,15 @@ export default function AdminPage() {
   const [subareas, setSubareas] = useState([]);
   const [loadingAreas, setLoadingAreas] = useState(false);
   
+  // Diagnostics state
+  const [diagnostics, setDiagnostics] = useState(null);
+  const [loadingDiagnostics, setLoadingDiagnostics] = useState(false);
+  
+  // Area editing state
+  const [editingArea, setEditingArea] = useState(null);
+  const [newAreaForm, setNewAreaForm] = useState({ code: '', name: '', name_en: '', level: '', parent_code: '' });
+  const [showNewAreaModal, setShowNewAreaModal] = useState(false);
+  
   // Modal state
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [moderationNotes, setModerationNotes] = useState('');
