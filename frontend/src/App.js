@@ -4,6 +4,7 @@ import { Toaster } from "./components/ui/sonner";
 import { LanguageProvider } from "./i18n/LanguageContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import RequireOrcid from "./components/RequireOrcid"; // <--- IMPORTANTE: Novo componente
 import AuthCallback from "./components/AuthCallback";
 import OrcidCallback from "./components/OrcidCallback";
 
@@ -24,42 +25,47 @@ import "./App.css";
 function AppRouter() {
   const location = useLocation();
   
-  // MANTENHA: Isso garante que se o Google mandar o hash, o AuthCallback roda
+  // MANTENHA: Isso intercepta o redirecionamento do Google via hash na URL
+  // Evita condição de corrida antes de montar as rotas
   if (location.hash?.includes('session_id=')) {
     return <AuthCallback />;
   }
 
   return (
     <Routes>
+      {/* Rotas Públicas */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/analytics" element={<AnalyticsPage />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       
-      {/* --- ADICIONE ESTA ROTA AQUI --- */}
-      {/* Isso garante que o AuthContext tenha para onde redirecionar sem ser protegido */}
+      {/* Rotas de Callback de Autenticação */}
       <Route path="/auth/callback" element={<AuthCallback />} />
-      
-      {/* ORCID OAuth Callback */}
       <Route path="/auth/orcid/callback" element={<OrcidCallback />} />
       
-      {/* Protected Routes */}
+      {/* Rotas Protegidas (Exigem Login) */}
       <Route path="/dashboard" element={
         <ProtectedRoute>
           <DashboardPage />
         </ProtectedRoute>
       } />
+
+      {/* Rota Protegida + Verificada (Exige Login + ORCID) */}
       <Route path="/submit" element={
         <ProtectedRoute>
-          <SubmissionPage />
+          <RequireOrcid> {/* <--- AQUI: O Guarda-Costas do ORCID */}
+            <SubmissionPage />
+          </RequireOrcid>
         </ProtectedRoute>
       } />
+
       <Route path="/settings" element={
         <ProtectedRoute>
           <SettingsPage />
         </ProtectedRoute>
       } />
+
       <Route path="/admin" element={
         <ProtectedRoute>
           <AdminPage />
