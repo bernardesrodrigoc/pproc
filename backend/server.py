@@ -1024,7 +1024,7 @@ def get_visibility_message(settings: dict) -> Optional[str]:
 
 @api_router.get("/analytics/overview")
 async def get_analytics_overview():
-    """Get overall platform statistics"""
+    """Get overall platform statistics with quality indices"""
     settings = await get_platform_settings()
     base_query = await get_submission_base_query(settings)
     
@@ -1035,21 +1035,27 @@ async def get_analytics_overview():
     # Count total submissions (respecting demo mode)
     total_submissions = await db.submissions.count_documents(base_query)
     
+    # Threshold for showing observation count (hidden until 400+)
+    OBSERVATION_THRESHOLD = 400
+    show_observation_count = total_submissions >= OBSERVATION_THRESHOLD
+    
     # For user_only mode, return minimal info
     if mode == "user_only" and not public_enabled:
         return {
-            "total_submissions": total_submissions,
+            "total_submissions": total_submissions if show_observation_count else None,
             "sufficient_data": False,
             "visibility_restricted": True,
-            "message": get_visibility_message(settings)
+            "message": get_visibility_message(settings),
+            "observation_status": "collecting" if not show_observation_count else "available"
         }
     
     if total_submissions < K_ANONYMITY_THRESHOLD:
         return {
-            "total_submissions": total_submissions,
+            "total_submissions": total_submissions if show_observation_count else None,
             "sufficient_data": False,
             "visibility_restricted": False,
-            "message": "Statistics will be published once sufficient anonymized submissions are collected."
+            "message": "As estatísticas agregadas são exibidas automaticamente quando há volume mínimo de dados para garantir interpretação adequada.",
+            "observation_status": "collecting" if not show_observation_count else "available"
         }
     
     # Decision type distribution
@@ -1075,6 +1081,126 @@ async def get_analytics_overview():
         {"$match": {"count": {"$gte": K_ANONYMITY_THRESHOLD}}}
     ]
     time_dist = await db.submissions.aggregate(time_pipeline).to_list(100)
+    
+    # NEW: Calculate quality indices from new fields
+    quality_indices = await calculate_quality_indices(base_query, total_submissions)
+    
+    return {
+        "total_submissions": total_submissions if show_observation_count else None,
+        "sufficient_data": True,
+        "visibility_restricted": False,
+        "observation_status": "collecting" if not show_observation_count else "available",
+        "decision_distribution": {d["_id"]: d["count"] for d in decision_dist},
+        "reviewer_distribution": {d["_id"]: d["count"] for d in reviewer_dist},
+        "time_distribution": {d["_id"]: d["count"] for d in time_dist},
+        # NEW: Quality indices
+        **quality_indices
+    }
+
+
+async def calculate_quality_indices(base_query: dict, total_count: int) -> dict:
+    """
+    Calculate aggregated quality indices from new assessment fields.
+    
+    Returns indices:
+    - average_review_quality_score: Mean of overall_review_quality (1-5)
+    - editorial_transparency_index: Based on reviewer count and editor engagement
+    - decision_fairness_index: % agreeing decision was fair
+    - reviewer_engagement_index: Based on feedback clarity and review depth
+    """
+    if total_count < K_ANONYMITY_THRESHOLD:
+        return {
+            "quality_indices": None,
+            "indices_available": False
+        }
+    
+    # Aggregate quality metrics
+    quality_pipeline = [
+        {"$match": {**base_query, "overall_review_quality": {"$exists": True, "$ne": None}}},
+        {"$group": {
+            "_id": None,
+            "avg_review_quality": {"$avg": "$overall_review_quality"},
+            "avg_feedback_clarity": {"$avg": "$feedback_clarity"},
+            "count": {"$sum": 1}
+        }}
+    ]
+    quality_result = await db.submissions.aggregate(quality_pipeline).to_list(1)
+    
+    # Fairness distribution
+    fairness_pipeline = [
+        {"$match": {**base_query, "decision_fairness": {"$exists": True, "$ne": None}}},
+        {"$group": {"_id": "$decision_fairness", "count": {"$sum": 1}}}
+    ]
+    fairness_dist = await db.submissions.aggregate(fairness_pipeline).to_list(10)
+    fairness_map = {f["_id"]: f["count"] for f in fairness_dist}
+    
+    # Recommendation distribution
+    recommend_pipeline = [
+        {"$match": {**base_query, "would_recommend": {"$exists": True, "$ne": None}}},
+        {"$group": {"_id": "$would_recommend", "count": {"$sum": 1}}}
+    ]
+    recommend_dist = await db.submissions.aggregate(recommend_pipeline).to_list(10)
+    recommend_map = {r["_id"]: r["count"] for r in recommend_dist}
+    
+    # Calculate indices
+    indices = {
+        "indices_available": False,
+        "quality_indices": {}
+    }
+    
+    if quality_result and quality_result[0].get("count", 0) >= K_ANONYMITY_THRESHOLD:
+        q = quality_result[0]
+        indices["indices_available"] = True
+        
+        # Average Review Quality Score (1-5 scale, displayed as 0-100)
+        if q.get("avg_review_quality"):
+            indices["quality_indices"]["average_review_quality"] = {
+                "value": round((q["avg_review_quality"] / 5) * 100, 1),
+                "scale": "0-100",
+                "description": "Average quality of peer review feedback"
+            }
+        
+        # Feedback Clarity Index
+        if q.get("avg_feedback_clarity"):
+            indices["quality_indices"]["feedback_clarity_index"] = {
+                "value": round((q["avg_feedback_clarity"] / 5) * 100, 1),
+                "scale": "0-100",
+                "description": "Average clarity and actionability of feedback"
+            }
+    
+    # Decision Fairness Index
+    total_fairness = sum(fairness_map.values())
+    if total_fairness >= K_ANONYMITY_THRESHOLD:
+        indices["indices_available"] = True
+        agree_count = fairness_map.get("agree", 0)
+        indices["quality_indices"]["decision_fairness_index"] = {
+            "value": round((agree_count / total_fairness) * 100, 1),
+            "scale": "0-100",
+            "description": "Percentage reporting decision aligned with feedback",
+            "distribution": {
+                "agree": fairness_map.get("agree", 0),
+                "neutral": fairness_map.get("neutral", 0),
+                "disagree": fairness_map.get("disagree", 0)
+            }
+        }
+    
+    # Recommendation Index
+    total_recommend = sum(recommend_map.values())
+    if total_recommend >= K_ANONYMITY_THRESHOLD:
+        indices["indices_available"] = True
+        yes_count = recommend_map.get("yes", 0)
+        indices["quality_indices"]["recommendation_index"] = {
+            "value": round((yes_count / total_recommend) * 100, 1),
+            "scale": "0-100",
+            "description": "Percentage who would recommend based on editorial process",
+            "distribution": {
+                "yes": recommend_map.get("yes", 0),
+                "neutral": recommend_map.get("neutral", 0),
+                "no": recommend_map.get("no", 0)
+            }
+        }
+    
+    return indices
     
     return {
         "total_submissions": total_submissions,
