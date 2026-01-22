@@ -112,8 +112,11 @@ class Submission(BaseModel):
     model_config = ConfigDict(extra="ignore")
     submission_id: str
     user_hashed_id: str  # Links to user anonymously
-    # Manuscript context
-    scientific_area: str
+    # Manuscript context - CNPq hierarchical areas
+    scientific_area: str  # Legacy field (kept for backwards compatibility)
+    scientific_area_grande: Optional[str] = None  # CNPq Grande Área code (e.g., "1")
+    scientific_area_area: Optional[str] = None  # CNPq Área code (e.g., "1.01")
+    scientific_area_subarea: Optional[str] = None  # CNPq Subárea code (e.g., "1.01.01")
     manuscript_type: str
     # Journal context
     journal_id: str
@@ -141,7 +144,11 @@ class Submission(BaseModel):
     valid_for_stats: bool = True  # Flag for statistical validity
 
 class SubmissionCreate(BaseModel):
-    scientific_area: str
+    # CNPq hierarchical scientific areas
+    scientific_area: Optional[str] = None  # Legacy field (deprecated but kept for compatibility)
+    scientific_area_grande: Optional[str] = None  # CNPq Grande Área code (e.g., "1")
+    scientific_area_area: Optional[str] = None  # CNPq Área code (e.g., "1.01")
+    scientific_area_subarea: Optional[str] = None  # CNPq Subárea code (e.g., "1.01.01") - optional
     manuscript_type: str
     journal_id: str
     publisher_id: str
@@ -162,6 +169,10 @@ class SubmissionCreate(BaseModel):
     custom_publisher_name: Optional[str] = None
     custom_journal_open_access: Optional[bool] = None
     custom_journal_apc_required: Optional[str] = None  # yes, no, unknown
+    # CONDITIONAL FIELDS - Open Access / APC
+    journal_is_open_access: Optional[bool] = None  # Controls if APC questions should appear
+    # CONDITIONAL FIELDS - Editor comments quality (only if comments were provided)
+    editor_comments_quality: Optional[int] = None  # 1-5 scale (only if editor_comments != 'no')
 
 class Journal(BaseModel):
     model_config = ConfigDict(extra="ignore")
