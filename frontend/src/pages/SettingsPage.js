@@ -21,7 +21,7 @@ export default function SettingsPage() {
   };
 
   // Verifica se o usuário tem ORCID vinculado (seja hash ou ID real)
-  const hasOrcid = !!(user?.orcid || user?.orcid_hash);
+  const hasOrcid = !!(user?.has_orcid || user?.orcid || user?.orcid_hash || user?.auth_provider === 'orcid');
 
   return (
     <div className="min-h-screen bg-[#FAFAF9]">
