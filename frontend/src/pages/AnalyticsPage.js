@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import VisibilityBanner, { VisibilityNotice } from '../components/VisibilityBanner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -42,6 +43,7 @@ export default function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [selectedPublisher, setSelectedPublisher] = useState('all');
+  const [visibilityStatus, setVisibilityStatus] = useState(null);
   
   const [overview, setOverview] = useState(null);
   const [publishers, setPublishers] = useState([]);
@@ -53,7 +55,7 @@ export default function AnalyticsPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [overviewRes, publishersRes, pubAnalytics, journalAnalytics, areaAnalytics] = await Promise.all([
+        const [overviewRes, publishersRes, pubAnalytics, journalAnalytics, areaAnalytics, visibilityRes] = await Promise.all([
           fetch(`${API}/analytics/overview`).then(r => r.json()),
           fetch(`${API}/publishers`).then(r => r.json()),
           fetch(`${API}/analytics/publishers`).then(r => r.json()),
