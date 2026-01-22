@@ -32,7 +32,11 @@ import {
   Trash2,
   Globe,
   Lock,
-  Unlock
+  Unlock,
+  FolderTree,
+  Edit2,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
