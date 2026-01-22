@@ -686,7 +686,7 @@ export default function SubmissionPage() {
                       </div>
                       
                       <p className="text-xs text-stone-500">
-                        Periódicos adicionados pelo usuário são armazenados como não verificados até validação.
+                        {t('submission.userAddedJournalNote')}
                       </p>
                     </div>
                   )}
