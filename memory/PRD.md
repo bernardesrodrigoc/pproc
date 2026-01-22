@@ -211,22 +211,32 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
   - New Quality Indices: Average Review Quality, Feedback Clarity Index, Decision Fairness Index, Recommendation Index
   - Submission validation with `valid_for_stats` flag (completeness, consistency, duplicate detection)
   - Institutional/neutral Portuguese messaging throughout
-- ✅ **Hierarchical Scientific Areas** (Updated):
+- ✅ **Hierarchical Scientific Areas** (Updated Jan 22, 2026):
   - 9 Major Areas (Grande Áreas), ~80 Areas, ~400 Subareas
+  - **Now stored in MongoDB** (scientific_areas collection) - no longer hardcoded
   - Cascading dropdowns in Step 1: Major Area → Area → Subarea
-  - New endpoints: /api/options/cnpq/grande-areas, /areas/{code}, /subareas/{code}, /lookup/{code}
-  - Backwards compatible with legacy scientific_area field
+  - Endpoints: /api/options/cnpq/grande-areas, /areas/{code}, /subareas/{code}, /lookup/{code}
+- ✅ **Admin Areas Management with Full CRUD** (NEW Jan 22, 2026):
+  - New "Areas" tab in Admin dashboard with hierarchy viewer
+  - **CREATE**: POST /api/admin/areas - Add new areas at any level
+  - **UPDATE**: PUT /api/admin/areas/{code} - Edit name, name_en, is_active
+  - **DELETE**: DELETE /api/admin/areas/{code} - Soft delete (disables area)
+  - Changes immediately reflect in submission form and analytics
+- ✅ **Admin Diagnostics Panel** (NEW Jan 22, 2026):
+  - Comprehensive data summary: total/sample/real/valid submissions, unique users
+  - Platform settings view: visibility mode, thresholds, demo mode status
+  - **Journal Visibility Status**: Shows each journal with submission count, user count, threshold status
+  - Visual indicators for which journals are visible/hidden and why
+- ✅ **Threshold-Based Visibility Fix** (Jan 22, 2026):
+  - Fixed data migration: submissions with is_sample=None → is_sample=False
+  - Fixed data migration: submissions with valid_for_stats=None → valid_for_stats=True
+  - With thresholds set to 1/1, real submissions now correctly unlock public stats
+  - Verified: 507 valid real submissions, 51 unique users, 50 visible journals
 - ✅ **Conditional Form Logic**:
   - Open Access question controls APC visibility (Step 3)
   - Editor comments quality only appears if editor provided comments (Step 4)
   - Backend validation rejects logically inconsistent submissions
-- ✅ **i18n Complete Translations** (Updated):
-  - All new form fields fully translated in EN/PT/ES
-  - Hierarchical area labels, conditional field labels, quality assessment descriptions
+- ✅ **i18n Complete Translations**:
+  - All form fields fully translated in EN/PT/ES
   - Language switching works correctly across entire form
-- ✅ **Admin Areas Management Tab** (NEW):
-  - New "Areas" tab in Admin dashboard
-  - Hierarchy viewer: Major Area → Area → Subarea
-  - Statistics summary showing counts at each level
-  - Read-only view with future edit capability noted
-- ✅ All 22 e2e tests passing (100%) - iteration_8.json
+- ✅ All critical tests passing (100%) - iteration_9.json
