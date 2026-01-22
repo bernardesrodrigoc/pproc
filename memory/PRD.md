@@ -116,7 +116,7 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 ### Database Seed Data
 - 10 major publishers (Elsevier, Springer Nature, Wiley, MDPI, Frontiers, etc.)
 - 100 journals (10 per publisher)
-- 500 sample submissions with `is_sample: true` flag
+- 500 sample submissions with `is_sample: true` flag and quality assessment fields
 - Platform settings in `platform_settings` collection
 
 ## Prioritized Backlog
@@ -127,10 +127,12 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 - [x] Public analytics dashboards
 - [x] Language toggle
 - [x] Controlled Data Visibility System
+- [x] Quality Assessment System (new neutral fields + indices)
 
 ### P1 (High Priority)
 - [x] Admin dashboard for flagging/validating submissions
 - [x] Admin Settings tab with visibility controls
+- [x] Submission validation (valid_for_stats)
 - [ ] User-added journal normalization workflow
 - [ ] Email notifications for submission status
 - [ ] Export analytics data (CSV/JSON)
