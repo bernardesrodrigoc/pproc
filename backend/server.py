@@ -95,6 +95,19 @@ class AdminStats(BaseModel):
     validated_submissions: int
     flagged_submissions: int
 
+# Platform Settings Models
+class PlatformSettingsUpdate(BaseModel):
+    visibility_mode: Optional[str] = None  # user_only, threshold_based, admin_forced
+    demo_mode_enabled: Optional[bool] = None
+    public_stats_enabled: Optional[bool] = None
+    min_submissions_per_journal: Optional[int] = None
+    min_unique_users_per_journal: Optional[int] = None
+
+class VisibilityOverride(BaseModel):
+    entity_type: str  # journal, publisher, area
+    entity_id: str
+    force_visible: bool
+
 class Submission(BaseModel):
     model_config = ConfigDict(extra="ignore")
     submission_id: str
@@ -119,6 +132,7 @@ class Submission(BaseModel):
     # Metadata
     created_at: datetime
     status: str = "pending"  # pending, validated, flagged
+    is_sample: bool = False  # Flag for sample/demo data
 
 class SubmissionCreate(BaseModel):
     scientific_area: str
