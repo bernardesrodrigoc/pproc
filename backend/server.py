@@ -828,6 +828,16 @@ async def create_submission(submission: SubmissionCreate, request: Request):
         }
         await db.journals.insert_one(new_journal)
     
+    # Determine scientific_area from hierarchical fields (backwards compatibility)
+    scientific_area = submission.scientific_area
+    if submission.scientific_area_grande:
+        # Use hierarchical fields if provided
+        scientific_area = submission.scientific_area_grande
+        if submission.scientific_area_area:
+            scientific_area = submission.scientific_area_area
+        if submission.scientific_area_subarea:
+            scientific_area = submission.scientific_area_subarea
+    
     # Validate submission for statistical validity
     valid_for_stats, validation_flags = await validate_submission_for_stats(
         user.hashed_id, journal_id, submission
@@ -836,7 +846,11 @@ async def create_submission(submission: SubmissionCreate, request: Request):
     submission_doc = {
         "submission_id": submission_id,
         "user_hashed_id": user.hashed_id,
-        "scientific_area": submission.scientific_area,
+        # CNPq hierarchical scientific areas
+        "scientific_area": scientific_area,  # Most specific level selected
+        "scientific_area_grande": submission.scientific_area_grande,
+        "scientific_area_area": submission.scientific_area_area,
+        "scientific_area_subarea": submission.scientific_area_subarea,
         "manuscript_type": submission.manuscript_type,
         "journal_id": journal_id,
         "publisher_id": publisher_id,
@@ -852,6 +866,9 @@ async def create_submission(submission: SubmissionCreate, request: Request):
         "feedback_clarity": getattr(submission, 'feedback_clarity', None),
         "decision_fairness": getattr(submission, 'decision_fairness', None),
         "would_recommend": getattr(submission, 'would_recommend', None),
+        # CONDITIONAL FIELDS
+        "journal_is_open_access": getattr(submission, 'journal_is_open_access', None),
+        "editor_comments_quality": getattr(submission, 'editor_comments_quality', None),
         # Metadata
         "evidence_file_id": None,
         "status": "pending",
