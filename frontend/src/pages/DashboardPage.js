@@ -206,6 +206,106 @@ export default function DashboardPage() {
           </Card>
         </div>
 
+        {/* Personal Insights Section */}
+        {insights?.has_data && (
+          <Card className="border-stone-200 mb-8">
+            <CardHeader>
+              <CardTitle className="font-serif text-xl flex items-center">
+                <Lightbulb className="w-5 h-5 mr-2 text-amber-500" />
+                Your Personal Insights
+              </CardTitle>
+              <CardDescription>
+                {insights.summary?.contribution_impact}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Editorial Process Insights */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-stone-700 flex items-center">
+                    <PieChart className="w-4 h-4 mr-2" />
+                    Editorial Process
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="bg-stone-50 rounded-lg p-3">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm text-stone-600">No Peer Review</span>
+                        <span className="text-sm font-medium">{insights.insights?.no_peer_review_rate}%</span>
+                      </div>
+                      <Progress value={insights.insights?.no_peer_review_rate || 0} className="h-1.5" />
+                    </div>
+                    <div className="bg-stone-50 rounded-lg p-3">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm text-stone-600">Single Reviewer</span>
+                        <span className="text-sm font-medium">{insights.insights?.single_reviewer_rate}%</span>
+                      </div>
+                      <Progress value={insights.insights?.single_reviewer_rate || 0} className="h-1.5" />
+                    </div>
+                    <div className="bg-stone-50 rounded-lg p-3">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm text-stone-600">Desk Reject</span>
+                        <span className="text-sm font-medium">{insights.insights?.desk_reject_rate}%</span>
+                      </div>
+                      <Progress value={insights.insights?.desk_reject_rate || 0} className="h-1.5" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Time Distribution */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-stone-700 flex items-center">
+                    <Clock className="w-4 h-4 mr-2" />
+                    Time to Decision
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="bg-emerald-50 rounded-lg p-3">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm text-emerald-700">Fast (0-30 days)</span>
+                        <span className="text-sm font-medium text-emerald-800">{insights.time_distribution?.fast_0_30_days}%</span>
+                      </div>
+                      <Progress value={insights.time_distribution?.fast_0_30_days || 0} className="h-1.5 bg-emerald-100" />
+                    </div>
+                    <div className="bg-amber-50 rounded-lg p-3">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm text-amber-700">Medium (31-90 days)</span>
+                        <span className="text-sm font-medium text-amber-800">{insights.time_distribution?.medium_31_90_days}%</span>
+                      </div>
+                      <Progress value={insights.time_distribution?.medium_31_90_days || 0} className="h-1.5 bg-amber-100" />
+                    </div>
+                    <div className="bg-red-50 rounded-lg p-3">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm text-red-700">Slow (90+ days)</span>
+                        <span className="text-sm font-medium text-red-800">{insights.time_distribution?.slow_90_plus_days}%</span>
+                      </div>
+                      <Progress value={insights.time_distribution?.slow_90_plus_days || 0} className="h-1.5 bg-red-100" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Top Journals */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-stone-700 flex items-center">
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Most Submitted Journals
+                  </h4>
+                  <div className="space-y-2">
+                    {insights.top_journals?.length > 0 ? (
+                      insights.top_journals.map((journal, idx) => (
+                        <div key={idx} className="bg-stone-50 rounded-lg p-3 flex justify-between items-center">
+                          <span className="text-sm text-stone-700 truncate pr-2">{journal.name}</span>
+                          <Badge variant="secondary" className="flex-shrink-0">{journal.count}</Badge>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-stone-500 py-4 text-center">No journal data yet</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Submissions List */}
         <Card className="border-stone-200">
           <CardHeader>
