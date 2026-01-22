@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useLanguage, LANGUAGES } from '../i18n/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
@@ -7,25 +7,21 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { toast } from 'sonner';
-import { Globe, User, Check, Loader2 } from 'lucide-react';
+import { Badge } from '../components/ui/badge';
+import { Globe, User, Check, ExternalLink, ShieldCheck } from 'lucide-react';
 
 export default function SettingsPage() {
   const { t, language, setLanguage } = useLanguage();
-  const { user, updateProfile } = useAuth();
-  const [orcid, setOrcid] = useState(user?.orcid || '');
-  const [saving, setSaving] = useState(false);
+  const { user, loginWithOrcid } = useAuth();
 
-  const handleSaveProfile = async () => {
-    setSaving(true);
-    try {
-      await updateProfile({ orcid });
-      toast.success(t('settings.saved'));
-    } catch (error) {
-      toast.error(t('common.error'));
-    }
-    setSaving(false);
+  // Função para iniciar o vínculo com ORCID
+  // O parâmetro '/settings' garante que o usuário volte para cá após conectar
+  const handleConnectOrcid = () => {
+    loginWithOrcid('/settings');
   };
+
+  // Verifica se o usuário tem ORCID vinculado (seja hash ou ID real)
+  const hasOrcid = !!(user?.orcid || user?.orcid_hash);
 
   return (
     <div className="min-h-screen bg-[#FAFAF9]">
@@ -34,7 +30,7 @@ export default function SettingsPage() {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12" data-testid="settings-page">
         <div className="mb-8">
           <h1 className="font-serif text-3xl text-stone-900 mb-2">
-            {t('settings.title')}
+            {t('settings.title') || 'Settings'}
           </h1>
         </div>
 
@@ -79,60 +75,95 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle className="font-serif text-lg flex items-center">
                 <User className="w-5 h-5 mr-2 text-stone-500" />
-                {t('settings.profile')}
+                {t('settings.profile') || 'Profile & Identity'}
               </CardTitle>
               <CardDescription>
-                Update your profile information
+                Manage your connected accounts and identity
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="email" className="text-stone-700">Email</Label>
-                <Input 
-                  id="email" 
-                  value={user?.email || ''} 
-                  disabled 
-                  className="bg-stone-50 mt-1"
-                />
+            <CardContent className="space-y-6">
+              
+              {/* Read-Only Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name" className="text-stone-700">Name</Label>
+                  <Input 
+                    id="name" 
+                    value={user?.name || ''} 
+                    disabled 
+                    className="bg-stone-50 mt-1 cursor-not-allowed text-stone-500"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="email" className="text-stone-700">Email</Label>
+                  <Input 
+                    id="email" 
+                    value={user?.email || ''} 
+                    disabled 
+                    className="bg-stone-50 mt-1 cursor-not-allowed text-stone-500"
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="name" className="text-stone-700">Name</Label>
-                <Input 
-                  id="name" 
-                  value={user?.name || ''} 
-                  disabled 
-                  className="bg-stone-50 mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="orcid" className="text-stone-700">{t('settings.orcid')}</Label>
-                <Input 
-                  id="orcid" 
-                  value={orcid} 
-                  onChange={(e) => setOrcid(e.target.value)}
-                  placeholder="0000-0000-0000-0000"
-                  className="mt-1"
-                  data-testid="orcid-input"
-                />
-                <p className="text-xs text-stone-500 mt-1">
-                  Your ORCID helps link your contributions to your research identity
-                </p>
-              </div>
-              <Button 
-                onClick={handleSaveProfile}
-                disabled={saving}
-                className="bg-stone-900 text-white hover:bg-stone-800"
-                data-testid="save-profile-btn"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
+
+              {/* ORCID Integration Section */}
+              <div className="pt-4 border-t border-stone-100">
+                <Label className="text-stone-900 font-medium mb-2 block">
+                  ORCID iD
+                </Label>
+                
+                {hasOrcid ? (
+                  // Estado Conectado
+                  <div className="flex items-center justify-between p-4 bg-green-50/50 border border-green-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-white p-1 rounded-full border border-green-100">
+                        <img 
+                          src="https://orcid.org/sites/default/files/images/orcid_16x16.png" 
+                          alt="ORCID" 
+                          className="w-5 h-5" 
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium text-stone-900">Connected</span>
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100 border-none">
+                            <ShieldCheck className="w-3 h-3 mr-1" />
+                            Verified
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-stone-500 mt-0.5">
+                          Your research identity is linked to this account.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
-                  t('settings.updateProfile')
+                  // Estado Desconectado
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-stone-50 border border-stone-200 rounded-lg gap-4">
+                    <div>
+                      <div className="flex items-center space-x-2 text-stone-900 font-medium">
+                        <img 
+                          src="https://orcid.org/sites/default/files/images/orcid_16x16.png" 
+                          alt="ORCID" 
+                          className="w-4 h-4" 
+                        />
+                        <span>Not Connected</span>
+                      </div>
+                      <p className="text-sm text-stone-500 mt-1 max-w-sm">
+                        Link your ORCID iD to verify your researcher status and unify your contributions.
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={handleConnectOrcid}
+                      variant="outline"
+                      className="bg-white hover:bg-stone-50 text-stone-700 border-stone-300 shadow-sm shrink-0"
+                    >
+                      Connect ORCID
+                      <ExternalLink className="w-4 h-4 ml-2 text-stone-400" />
+                    </Button>
+                  </div>
                 )}
-              </Button>
+              </div>
+
             </CardContent>
           </Card>
         </div>
