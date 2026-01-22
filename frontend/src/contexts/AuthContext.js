@@ -8,6 +8,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [orcidConfigured, setOrcidConfigured] = useState(false);
+  const [authVersion, setAuthVersion] = useState(0); // Force re-render on auth changes
 
   const checkAuth = useCallback(async () => {
     try {
@@ -18,6 +19,7 @@ export function AuthProvider({ children }) {
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
+        setAuthVersion(v => v + 1); // Force components to re-check auth state
       } else {
         setUser(null);
       }
@@ -110,6 +112,7 @@ export function AuthProvider({ children }) {
 
       const userData = await response.json();
       setUser(userData);
+      setAuthVersion(v => v + 1); // Force re-render
       return userData;
     } catch (error) {
       console.error('ORCID callback error:', error);
@@ -126,8 +129,13 @@ export function AuthProvider({ children }) {
     } catch (error) {
       console.error('Logout error:', error);
     }
+    // Clear ALL auth state immediately and synchronously
     setUser(null);
-    window.location.href = '/';
+    setAuthVersion(v => v + 1);
+    // Don't redirect immediately - let state update propagate
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 100);
   };
 
   const processSession = async (sessionId) => {
@@ -144,7 +152,9 @@ export function AuthProvider({ children }) {
 
       if (response.ok) {
         const userData = await response.json();
+        // Set user state BEFORE returning
         setUser(userData);
+        setAuthVersion(v => v + 1); // Force components to update
         return userData;
       }
       throw new Error('Session processing failed');
@@ -177,6 +187,11 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Compute derived state values
+  const isAuthenticated = !!user;
+  const isAdmin = user?.is_admin === true;
+  const trustScoreVisible = user?.trust_score_visible || false;
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -187,10 +202,12 @@ export function AuthProvider({ children }) {
       logout, 
       processSession, 
       updateProfile,
-      isAuthenticated: !!user,
-      isAdmin: user?.is_admin || false,
-      trustScoreVisible: user?.trust_score_visible || false,
-      orcidConfigured
+      checkAuth,
+      isAuthenticated,
+      isAdmin,
+      trustScoreVisible,
+      orcidConfigured,
+      authVersion // Expose for components that need to force re-render
     }}>
       {children}
     </AuthContext.Provider>
