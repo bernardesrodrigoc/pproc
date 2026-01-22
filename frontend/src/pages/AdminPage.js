@@ -62,6 +62,14 @@ export default function AdminPage() {
   const [purgingData, setPurgingData] = useState(false);
   const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
   
+  // Areas management state
+  const [grandeAreas, setGrandeAreas] = useState([]);
+  const [selectedGrandeArea, setSelectedGrandeArea] = useState(null);
+  const [areas, setAreas] = useState([]);
+  const [selectedArea, setSelectedArea] = useState(null);
+  const [subareas, setSubareas] = useState([]);
+  const [loadingAreas, setLoadingAreas] = useState(false);
+  
   // Modal state
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [moderationNotes, setModerationNotes] = useState('');
