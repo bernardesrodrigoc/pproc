@@ -1,6 +1,9 @@
 """
 Seed script for Editorial Decision Statistics Platform
 Populates database with publishers, journals, and sample data
+
+IMPORTANT: All sample data is flagged with is_sample=True
+Sample data can be purged via admin controls without affecting real user data
 """
 import asyncio
 import os
@@ -18,6 +21,23 @@ load_dotenv(ROOT_DIR / '.env')
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
+
+# Default platform settings
+DEFAULT_PLATFORM_SETTINGS = {
+    "settings_id": "global",
+    "visibility_mode": "user_only",  # user_only | threshold_based | admin_forced
+    "demo_mode_enabled": True,  # Show sample data in analytics
+    "public_stats_enabled": False,  # Enable public statistics display
+    "min_submissions_per_journal": 3,
+    "min_unique_users_per_journal": 3,
+    "visibility_overrides": {
+        "journals": {},  # journal_id: true/false
+        "publishers": {},  # publisher_id: true/false
+        "areas": {}  # area_id: true/false
+    },
+    "created_at": datetime.now(timezone.utc).isoformat(),
+    "updated_at": datetime.now(timezone.utc).isoformat()
+}
 
 # Publishers and their journals
 PUBLISHERS_AND_JOURNALS = {
