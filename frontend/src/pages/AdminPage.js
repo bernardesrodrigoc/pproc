@@ -595,7 +595,345 @@ export default function AdminPage() {
               </div>
             )}
           </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" data-testid="settings-tab">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Visibility Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-serif flex items-center">
+                    <Globe className="w-5 h-5 mr-2" />
+                    Visibility Settings
+                  </CardTitle>
+                  <CardDescription>
+                    Control when and how public statistics are displayed
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {platformSettings ? (
+                    <>
+                      {/* Visibility Mode */}
+                      <div className="space-y-2">
+                        <Label>Visibility Mode</Label>
+                        <Select 
+                          value={platformSettings.visibility_mode}
+                          onValueChange={async (value) => {
+                            setSavingSettings(true);
+                            try {
+                              const response = await fetch(`${API}/admin/settings`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ visibility_mode: value })
+                              });
+                              if (response.ok) {
+                                const data = await response.json();
+                                setPlatformSettings(data);
+                                toast.success('Visibility mode updated');
+                              }
+                            } catch (error) {
+                              toast.error('Failed to update settings');
+                            }
+                            setSavingSettings(false);
+                          }}
+                        >
+                          <SelectTrigger data-testid="visibility-mode-select">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user_only">
+                              <div className="flex items-center">
+                                <Lock className="w-4 h-4 mr-2" />
+                                User-Only Insights
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="threshold_based">
+                              <div className="flex items-center">
+                                <BarChart3 className="w-4 h-4 mr-2" />
+                                Threshold-Based
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="admin_forced">
+                              <div className="flex items-center">
+                                <Unlock className="w-4 h-4 mr-2" />
+                                Admin-Forced
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-stone-500">
+                          {platformSettings.visibility_mode === 'user_only' && 'Users see only their own insights. Public dashboards are hidden.'}
+                          {platformSettings.visibility_mode === 'threshold_based' && 'Public stats shown when threshold is met.'}
+                          {platformSettings.visibility_mode === 'admin_forced' && 'Admin controls public stats visibility directly.'}
+                        </p>
+                      </div>
+
+                      {/* Public Stats Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Public Statistics</Label>
+                          <p className="text-xs text-stone-500">Enable public dashboard visibility</p>
+                        </div>
+                        <Switch
+                          checked={platformSettings.public_stats_enabled}
+                          onCheckedChange={async (checked) => {
+                            setSavingSettings(true);
+                            try {
+                              const response = await fetch(`${API}/admin/settings`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ public_stats_enabled: checked })
+                              });
+                              if (response.ok) {
+                                const data = await response.json();
+                                setPlatformSettings(data);
+                                toast.success(checked ? 'Public stats enabled' : 'Public stats disabled');
+                              }
+                            } catch (error) {
+                              toast.error('Failed to update settings');
+                            }
+                            setSavingSettings(false);
+                          }}
+                          data-testid="public-stats-toggle"
+                        />
+                      </div>
+
+                      {/* Demo Mode Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Demo Mode (Sample Data)</Label>
+                          <p className="text-xs text-stone-500">Include sample data in analytics</p>
+                        </div>
+                        <Switch
+                          checked={platformSettings.demo_mode_enabled}
+                          onCheckedChange={async (checked) => {
+                            setSavingSettings(true);
+                            try {
+                              const response = await fetch(`${API}/admin/settings`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ demo_mode_enabled: checked })
+                              });
+                              if (response.ok) {
+                                const data = await response.json();
+                                setPlatformSettings(data);
+                                toast.success(checked ? 'Demo mode enabled' : 'Demo mode disabled');
+                              }
+                            } catch (error) {
+                              toast.error('Failed to update settings');
+                            }
+                            setSavingSettings(false);
+                          }}
+                          data-testid="demo-mode-toggle"
+                        />
+                      </div>
+
+                      {/* Thresholds */}
+                      <div className="pt-4 border-t">
+                        <Label className="mb-3 block">Visibility Thresholds</Label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs text-stone-500">Min Submissions/Journal</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={platformSettings.min_submissions_per_journal}
+                              onChange={async (e) => {
+                                const value = parseInt(e.target.value);
+                                if (value >= 1) {
+                                  const response = await fetch(`${API}/admin/settings`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    credentials: 'include',
+                                    body: JSON.stringify({ min_submissions_per_journal: value })
+                                  });
+                                  if (response.ok) {
+                                    setPlatformSettings(await response.json());
+                                  }
+                                }
+                              }}
+                              className="mt-1"
+                              data-testid="min-submissions-input"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-stone-500">Min Unique Users/Journal</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={platformSettings.min_unique_users_per_journal}
+                              onChange={async (e) => {
+                                const value = parseInt(e.target.value);
+                                if (value >= 1) {
+                                  const response = await fetch(`${API}/admin/settings`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    credentials: 'include',
+                                    body: JSON.stringify({ min_unique_users_per_journal: value })
+                                  });
+                                  if (response.ok) {
+                                    setPlatformSettings(await response.json());
+                                  }
+                                }
+                              }}
+                              className="mt-1"
+                              data-testid="min-users-input"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-stone-400" />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Data Management */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-serif flex items-center">
+                    <Database className="w-5 h-5 mr-2" />
+                    Data Management
+                  </CardTitle>
+                  <CardDescription>
+                    Manage sample and real user data
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {dataStats ? (
+                    <>
+                      {/* Data Breakdown */}
+                      <div className="space-y-4">
+                        <div className="bg-stone-50 rounded-lg p-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium">Submissions</span>
+                            <span className="text-sm text-stone-500">{dataStats.submissions.total} total</span>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-stone-600">Real User Data</span>
+                              <span className="font-medium text-emerald-600">{dataStats.submissions.real}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-stone-600">Sample Data</span>
+                              <span className="font-medium text-amber-600">{dataStats.submissions.sample}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-stone-50 rounded-lg p-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium">Users</span>
+                            <span className="text-sm text-stone-500">{dataStats.users.total} total</span>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-stone-600">Real Users</span>
+                              <span className="font-medium text-emerald-600">{dataStats.users.real}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-stone-600">Sample Users</span>
+                              <span className="font-medium text-amber-600">{dataStats.users.sample}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Purge Sample Data */}
+                      <div className="pt-4 border-t">
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                          <h4 className="font-medium text-red-900 mb-2 flex items-center">
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Purge Sample Data
+                          </h4>
+                          <p className="text-sm text-red-700 mb-4">
+                            This will permanently delete all sample submissions. Real user data will not be affected.
+                          </p>
+                          <Button
+                            variant="destructive"
+                            onClick={() => setShowPurgeConfirm(true)}
+                            disabled={purgingData || dataStats.submissions.sample === 0}
+                            data-testid="purge-sample-btn"
+                          >
+                            {purgingData ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4 mr-2" />
+                            )}
+                            Purge {dataStats.submissions.sample} Sample Submissions
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-stone-400" />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
         </Tabs>
+
+        {/* Purge Confirmation Dialog */}
+        <Dialog open={showPurgeConfirm} onOpenChange={setShowPurgeConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Purge Sample Data</DialogTitle>
+              <DialogDescription>
+                This action cannot be undone. All sample submissions will be permanently deleted.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowPurgeConfirm(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={async () => {
+                  setPurgingData(true);
+                  try {
+                    const response = await fetch(`${API}/admin/data/purge-sample`, {
+                      method: 'POST',
+                      credentials: 'include'
+                    });
+                    if (response.ok) {
+                      const result = await response.json();
+                      toast.success(`Purged ${result.deleted.submissions} sample submissions`);
+                      // Refresh data stats
+                      const statsRes = await fetch(`${API}/admin/data/stats`, { credentials: 'include' });
+                      if (statsRes.ok) {
+                        setDataStats(await statsRes.json());
+                      }
+                      // Refresh main stats
+                      const mainStatsRes = await fetch(`${API}/admin/stats`, { credentials: 'include' });
+                      if (mainStatsRes.ok) {
+                        setStats(await mainStatsRes.json());
+                      }
+                    } else {
+                      toast.error('Failed to purge sample data');
+                    }
+                  } catch (error) {
+                    toast.error('An error occurred');
+                  }
+                  setPurgingData(false);
+                  setShowPurgeConfirm(false);
+                }}
+                disabled={purgingData}
+              >
+                {purgingData ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Yes, Purge Sample Data
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
 
       {/* Submission Review Modal */}
