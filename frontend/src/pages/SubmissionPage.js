@@ -685,7 +685,7 @@ export default function SubmissionPage() {
                       </div>
                       
                       <p className="text-xs text-stone-500">
-                        User-added journals are stored as "Unverified" and won't appear in public rankings until validated.
+                        Periódicos adicionados pelo usuário são armazenados como não verificados até validação.
                       </p>
                     </div>
                   )}
