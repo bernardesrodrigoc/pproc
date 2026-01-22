@@ -183,6 +183,127 @@ class EvidenceFile(BaseModel):
     retention_until: datetime
     created_at: datetime
 
+# ============== PLATFORM SETTINGS HELPERS ==============
+
+# Default settings (used when no settings exist in DB)
+DEFAULT_PLATFORM_SETTINGS = {
+    "settings_id": "global",
+    "visibility_mode": "user_only",
+    "demo_mode_enabled": True,
+    "public_stats_enabled": False,
+    "min_submissions_per_journal": 3,
+    "min_unique_users_per_journal": 3,
+    "visibility_overrides": {
+        "journals": {},
+        "publishers": {},
+        "areas": {}
+    }
+}
+
+async def get_platform_settings() -> dict:
+    """Get current platform settings, create defaults if not exist"""
+    settings = await db.platform_settings.find_one({"settings_id": "global"}, {"_id": 0})
+    if not settings:
+        settings = DEFAULT_PLATFORM_SETTINGS.copy()
+        settings["created_at"] = datetime.now(timezone.utc).isoformat()
+        settings["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.platform_settings.insert_one(settings)
+    return settings
+
+async def get_submission_base_query(settings: dict, include_sample: bool = None) -> dict:
+    """Build base query for submissions based on settings
+    
+    Args:
+        settings: Platform settings dict
+        include_sample: Override for sample data inclusion. If None, uses demo_mode_enabled
+    
+    Returns:
+        MongoDB query dict
+    """
+    query = {"status": {"$ne": "flagged"}}
+    
+    # Determine if we should include sample data
+    if include_sample is None:
+        include_sample = settings.get("demo_mode_enabled", True)
+    
+    if not include_sample:
+        # Exclude sample data - only real user submissions
+        query["is_sample"] = {"$ne": True}
+    
+    return query
+
+async def check_journal_visibility(journal_id: str, settings: dict) -> dict:
+    """Check if a journal meets visibility thresholds
+    
+    Returns:
+        {
+            "visible": bool,
+            "reason": str,
+            "submission_count": int,
+            "unique_users": int,
+            "threshold_met": bool
+        }
+    """
+    # Check for admin override
+    overrides = settings.get("visibility_overrides", {}).get("journals", {})
+    if journal_id in overrides:
+        return {
+            "visible": overrides[journal_id],
+            "reason": "admin_override",
+            "submission_count": 0,
+            "unique_users": 0,
+            "threshold_met": False
+        }
+    
+    # Check visibility mode
+    mode = settings.get("visibility_mode", "user_only")
+    if mode == "user_only":
+        return {
+            "visible": False,
+            "reason": "user_only_mode",
+            "submission_count": 0,
+            "unique_users": 0,
+            "threshold_met": False
+        }
+    
+    if mode == "admin_forced":
+        return {
+            "visible": settings.get("public_stats_enabled", False),
+            "reason": "admin_forced",
+            "submission_count": 0,
+            "unique_users": 0,
+            "threshold_met": True
+        }
+    
+    # Threshold-based mode - check actual data
+    base_query = await get_submission_base_query(settings)
+    base_query["journal_id"] = journal_id
+    
+    # Count submissions
+    submission_count = await db.submissions.count_documents(base_query)
+    
+    # Count unique users
+    unique_users_pipeline = [
+        {"$match": base_query},
+        {"$group": {"_id": "$user_hashed_id"}},
+        {"$count": "count"}
+    ]
+    unique_result = await db.submissions.aggregate(unique_users_pipeline).to_list(1)
+    unique_users = unique_result[0]["count"] if unique_result else 0
+    
+    min_submissions = settings.get("min_submissions_per_journal", 3)
+    min_users = settings.get("min_unique_users_per_journal", 3)
+    
+    threshold_met = submission_count >= min_submissions and unique_users >= min_users
+    
+    return {
+        "visible": threshold_met and settings.get("public_stats_enabled", False),
+        "reason": "threshold_check",
+        "submission_count": submission_count,
+        "unique_users": unique_users,
+        "threshold_met": threshold_met
+    }
+
 # ============== AUTH HELPERS ==============
 
 async def get_current_user(request: Request) -> Optional[User]:
