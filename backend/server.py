@@ -899,7 +899,8 @@ async def validate_submission_for_stats(user_hashed_id: str, journal_id: str, su
     Checks:
     1. Completeness - all required fields present
     2. Logical consistency - no contradictory responses
-    3. Duplicates - not a duplicate submission (same user + journal within 30 days)
+    3. Conditional field validation - conditional fields only present when appropriate
+    4. Duplicates - not a duplicate submission (same user + journal within 30 days)
     """
     flags = {
         "is_complete": True,
@@ -909,32 +910,69 @@ async def validate_submission_for_stats(user_hashed_id: str, journal_id: str, su
     }
     
     # 1. Check completeness (required fields)
-    required_fields = ['scientific_area', 'manuscript_type', 'decision_type', 
-                       'reviewer_count', 'time_to_decision', 'review_comments', 
-                       'editor_comments', 'perceived_coherence']
+    # Note: scientific_area can be the legacy field OR the hierarchical fields
+    has_scientific_area = (
+        getattr(submission, 'scientific_area', None) or 
+        getattr(submission, 'scientific_area_grande', None)
+    )
+    
+    if not has_scientific_area:
+        flags["is_complete"] = False
+        flags["issues"].append("missing_scientific_area")
+    
+    required_fields = ['manuscript_type', 'decision_type', 'reviewer_count', 
+                       'time_to_decision', 'editor_comments', 'perceived_coherence']
     
     for field in required_fields:
         value = getattr(submission, field, None)
-        if value is None or (isinstance(value, str) and not value.strip()) or (isinstance(value, list) and len(value) == 0):
+        if value is None or (isinstance(value, str) and not value.strip()):
             flags["is_complete"] = False
             flags["issues"].append(f"missing_{field}")
     
-    # 2. Check logical consistency
-    # Example: desk_reject typically has 0 reviewers and fast decision
-    reviewer_count = getattr(submission, 'reviewer_count', '')
+    # Review comments can be empty for desk rejects
     decision_type = getattr(submission, 'decision_type', '')
     review_comments = getattr(submission, 'review_comments', [])
+    if decision_type != 'desk_reject' and (not review_comments or len(review_comments) == 0):
+        flags["is_complete"] = False
+        flags["issues"].append("missing_review_comments")
+    
+    # 2. Check logical consistency
+    reviewer_count = getattr(submission, 'reviewer_count', '')
+    editor_comments = getattr(submission, 'editor_comments', '')
     
     # Inconsistency: detailed review comments but 0 reviewers
-    if reviewer_count == "0" and review_comments and 'methodology' in review_comments or 'statistics' in review_comments:
-        flags["is_consistent"] = False
-        flags["issues"].append("inconsistent_reviewers_comments")
+    if reviewer_count == "0" and review_comments:
+        detailed_comments = ['methodology', 'statistics', 'conceptual']
+        if any(c in review_comments for c in detailed_comments):
+            flags["is_consistent"] = False
+            flags["issues"].append("inconsistent_reviewers_comments")
     
     # Inconsistency: desk reject with 2+ reviewers (unusual but not impossible - just flag)
     if decision_type == "desk_reject" and reviewer_count == "2+":
         flags["issues"].append("unusual_desk_reject_reviewers")  # Warning, not invalid
     
-    # 3. Check for duplicates (same user + journal within 30 days)
+    # 3. Conditional field validation
+    # APC range should only be provided for open access journals
+    journal_is_open_access = getattr(submission, 'journal_is_open_access', None)
+    apc_range = getattr(submission, 'apc_range', None)
+    
+    # If journal is NOT open access, APC range should be 'no_apc' or None
+    if journal_is_open_access is False and apc_range and apc_range not in ['no_apc', '']:
+        flags["is_consistent"] = False
+        flags["issues"].append("apc_provided_for_non_open_access")
+    
+    # Editor comments quality should only be provided if editor provided comments
+    editor_comments_quality = getattr(submission, 'editor_comments_quality', None)
+    if editor_comments == 'no' and editor_comments_quality is not None:
+        flags["is_consistent"] = False
+        flags["issues"].append("editor_quality_without_comments")
+    
+    # Quality assessment: feedback_clarity only meaningful if there was feedback
+    feedback_clarity = getattr(submission, 'feedback_clarity', None)
+    if reviewer_count == "0" and editor_comments == 'no' and feedback_clarity is not None:
+        flags["issues"].append("feedback_clarity_without_feedback")  # Warning
+    
+    # 4. Check for duplicates (same user + journal within 30 days)
     thirty_days_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
     
     existing = await db.submissions.find_one({
