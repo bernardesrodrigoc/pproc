@@ -544,7 +544,17 @@ const translations = {
       totalSubmissions: "Total de Envíos",
       avgTransparency: "Transparencia Prom.",
       avgReviewDepth: "Profundidad Prom.",
-      insufficientData: "Datos insuficientes para mostrar (mínimo 5 casos requeridos para k-anonimato)",
+      insufficientData: "Recopilación de datos en curso",
+      dataCollectionTitle: "Estadísticas Agregadas — Recopilación de Datos en Curso",
+      dataCollectionMessage: "Para garantizar la fiabilidad estadística y proteger el anonimato de los contribuyentes, las métricas públicas se publican solo cuando hay suficientes observaciones independientes.",
+      dataCollectionNote: "Tu contribución ha sido registrada y se incluirá en los análisis agregados una vez que se alcancen los umbrales de publicación.",
+      dataCollectionWhyTitle: "¿Por qué este enfoque?",
+      dataCollectionWhyList: [
+        "Protege la identidad de los contribuyentes mediante agregación",
+        "Garantiza la robustez estadística de las métricas publicadas",
+        "Previene la identificación de envíos individuales"
+      ],
+      dataCollectionPersonalNote: "Mientras tanto, tu panel de Insights Personales muestra análisis basados exclusivamente en tus propios envíos.",
       scores: {
         transparency: "Índice de Transparencia",
         transparencyDesc: "Mide la presencia de revisores y compromiso editorial en el proceso de decisión",
