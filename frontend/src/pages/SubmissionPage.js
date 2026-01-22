@@ -815,7 +815,7 @@ export default function SubmissionPage() {
                   {/* Conditional note for desk rejects */}
                   {formData.decision_type === 'desk_reject' && (
                     <p className="text-sm text-amber-600 mb-2">
-                      Nota: Para desk reject, este campo pode ficar vazio.
+                      {t('submission.reviewCommentsNote')}
                     </p>
                   )}
                   <div className="space-y-3">
@@ -860,10 +860,10 @@ export default function SubmissionPage() {
                 {formData.editor_comments && formData.editor_comments !== 'no' && (
                   <div className="border-l-4 border-blue-400 pl-4 bg-blue-50/50 py-4 rounded-r">
                     <Label className="text-stone-700 font-medium mb-3 block">
-                      Qualidade dos Comentários do Editor
+                      {t('submission.editorCommentsQuality')}
                     </Label>
                     <p className="text-sm text-stone-500 mb-3">
-                      Como você avalia a qualidade dos comentários fornecidos pelo editor?
+                      {t('submission.editorCommentsQualityDesc')}
                     </p>
                     <div className="flex items-center justify-between gap-2">
                       {[1, 2, 3, 4, 5].map(value => (
@@ -883,8 +883,8 @@ export default function SubmissionPage() {
                       ))}
                     </div>
                     <div className="flex justify-between text-xs text-stone-500 mt-1">
-                      <span>Muito baixa</span>
-                      <span>Muito alta</span>
+                      <span>{t('submission.veryLow')}</span>
+                      <span>{t('submission.veryHigh')}</span>
                     </div>
                   </div>
                 )}
