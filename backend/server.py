@@ -1014,7 +1014,7 @@ async def get_publisher_analytics():
     verified_pub_ids = [p["publisher_id"] for p in verified_publishers]
     
     pipeline = [
-        {"$match": {"status": {"$ne": "flagged"}, "publisher_id": {"$in": verified_pub_ids}}},
+        {"$match": {**base_query, "publisher_id": {"$in": verified_pub_ids}}},
         {"$group": {
             "_id": "$publisher_id",
             "total_cases": {"$sum": 1},
