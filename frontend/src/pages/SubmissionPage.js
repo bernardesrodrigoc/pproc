@@ -275,7 +275,8 @@ export default function SubmissionPage() {
   const canProceed = () => {
     switch (step) {
       case 1:
-        return formData.scientific_area && formData.manuscript_type;
+        // CNPq hierarchical: Grande Área and Área are required, Subárea is optional
+        return formData.scientific_area_grande && formData.scientific_area_area && formData.manuscript_type;
       case 2:
         // Check publisher
         const publisherValid = formData.publisher_id && 
@@ -285,11 +286,21 @@ export default function SubmissionPage() {
           (formData.journal_id !== 'other' || formData.custom_journal_name.trim());
         return publisherValid && journalValid;
       case 3:
-        return formData.decision_type && formData.reviewer_count && 
-               formData.time_to_decision && formData.apc_range;
+        // Decision, reviewer count, time are always required
+        // APC is conditional: only required if journal is open access
+        const baseValid = formData.decision_type && formData.reviewer_count && formData.time_to_decision;
+        // If open access question is answered as "yes", APC range is required
+        const apcValid = formData.journal_is_open_access !== true || 
+          (formData.journal_is_open_access === true && formData.apc_range);
+        return baseValid && apcValid;
       case 4:
-        return formData.editor_comments && formData.perceived_coherence;
+        // Editor comments is required
+        // Editor comments quality is conditional: only if editor provided comments
+        const editorRequired = formData.editor_comments && formData.perceived_coherence;
+        return editorRequired;
       case 5:
+        return true; // Quality assessment - all optional
+      case 6:
         return true; // Evidence is optional
       default:
         return false;
