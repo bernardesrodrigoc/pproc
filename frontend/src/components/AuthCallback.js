@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react';
 export default function AuthCallback() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { processSession } = useAuth();
+  const { processSession, checkAuth } = useAuth();
   const hasProcessed = useRef(false);
 
   useEffect(() => {
@@ -27,14 +27,17 @@ export default function AuthCallback() {
           return;
         }
 
-        // Process the session
-        const user = await processSession(sessionId);
+        // Process the session and wait for it to complete
+        await processSession(sessionId);
         
-        // Navigate to dashboard with user data
-        navigate('/dashboard', { 
-          replace: true,
-          state: { user }
-        });
+        // Small delay to ensure React state has propagated
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Double-check auth state is updated
+        await checkAuth();
+        
+        // Navigate to dashboard
+        navigate('/dashboard', { replace: true });
       } catch (error) {
         console.error('Auth callback error:', error);
         navigate('/login', { replace: true });
@@ -42,7 +45,7 @@ export default function AuthCallback() {
     };
 
     processAuth();
-  }, [location, navigate, processSession]);
+  }, [location, navigate, processSession, checkAuth]);
 
   return (
     <div className="min-h-screen bg-[#FAFAF9] flex items-center justify-center">
