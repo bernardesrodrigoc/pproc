@@ -16,7 +16,10 @@ import {
   AlertCircle,
   TrendingUp,
   Award,
-  Loader2
+  Loader2,
+  PieChart,
+  BarChart3,
+  Lightbulb
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -25,25 +28,30 @@ export default function DashboardPage() {
   const { t } = useLanguage();
   const { user, trustScoreVisible } = useAuth();
   const [submissions, setSubmissions] = useState([]);
+  const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSubmissions = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`${API}/submissions/my`, {
-          credentials: 'include'
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setSubmissions(data);
+        const [submissionsRes, insightsRes] = await Promise.all([
+          fetch(`${API}/submissions/my`, { credentials: 'include' }),
+          fetch(`${API}/users/my-insights`, { credentials: 'include' })
+        ]);
+        
+        if (submissionsRes.ok) {
+          setSubmissions(await submissionsRes.json());
+        }
+        if (insightsRes.ok) {
+          setInsights(await insightsRes.json());
         }
       } catch (error) {
-        console.error('Failed to fetch submissions:', error);
+        console.error('Failed to fetch data:', error);
       }
       setLoading(false);
     };
 
-    fetchSubmissions();
+    fetchData();
   }, []);
 
   const getStatusBadge = (status) => {
