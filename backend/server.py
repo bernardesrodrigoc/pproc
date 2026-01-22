@@ -804,19 +804,55 @@ async def add_journal(request: Request, name: str, publisher_id: str):
     
     return {"journal_id": journal_id, "name": name, "publisher_id": publisher_id}
 
+
+
+# --- ROTA NOVA: Estrutura para o Frontend (Cascata) ---
+@api_router.get("/journals/structure")
+async def get_journals_structure():
+    """Returns { 'Publisher Name': ['Journal A', 'Journal B'], ... }"""
+    
+    structure = {}
+    
+    # Busca todos os journals (verificados ou adicionados por usuários)
+    # Otimização: Buscamos apenas o nome e o ID do publisher
+    cursor = db.journals.find({}, {"publisher_id": 1, "name": 1, "_id": 0})
+    
+    # Cache local de nomes de publishers para não consultar o banco mil vezes
+    publisher_names = {}
+    
+    async for doc in cursor:
+        pub_id = doc.get("publisher_id")
+        j_name = doc.get("name")
+        
+        if not pub_id or not j_name:
+            continue
+            
+        # Resolve o nome do Publisher
+        if pub_id not in publisher_names:
+            pub = await db.publishers.find_one({"publisher_id": pub_id}, {"name": 1})
+            publisher_names[pub_id] = pub["name"] if pub else "Other"
+            
+        pub_name = publisher_names[pub_id]
+        
+        if pub_name not in structure:
+            structure[pub_name] = []
+        
+        if j_name not in structure[pub_name]:
+            structure[pub_name].append(j_name)
+            
+    return structure
+
 # ============== SUBMISSIONS ==============
 
 @api_router.post("/submissions")
 async def create_submission(submission: SubmissionCreate, request: Request):
-    """Create a new editorial decision submission"""
-    # 1. Garante que o usuário está logado
+    """Create a new editorial decision submission with Crowdsourcing Learning"""
+    
+    # 1. Autenticação
     user = await require_auth(request)
     
-    # --- NOVO: GUARDA DE INTEGRIDADE CIENTÍFICA ---
-    # Busca o perfil completo do usuário no banco
+    # Guarda de Integridade Científica (ORCID Check)
     user_doc = await db.users.find_one({"user_id": user.user_id})
-    
-    # Verifica se existe vínculo com ORCID (seja pela flag, pelo hash ou pelo login original)
     has_orcid = (
         user_doc.get("has_orcid") is True or 
         user_doc.get("orcid_hash") is not None or 
@@ -828,76 +864,135 @@ async def create_submission(submission: SubmissionCreate, request: Request):
             status_code=403, 
             detail="Scientific Integrity Check: You must link your ORCID account in Settings to submit evidence."
         )
-    # ----------------------------------------------
+
+    # =========================================================================
+    # 2. Lógica de "Aprendizado" (Crowdsourcing) - O CORAÇÃO DA MUDANÇA
+    # =========================================================================
     
+    final_publisher_id = submission.publisher_id
+    final_journal_id = submission.journal_id
+    
+    # Se o usuário digitou um Jornal Customizado ("Other")
+    if submission.journal_id == "other" and submission.custom_journal_name:
+        
+        # Normaliza o texto (Remove espaços extras, Título Capitalizado)
+        clean_journal = " ".join(submission.custom_journal_name.split()).title()
+        
+        # Resolve o nome da Editora
+        clean_publisher = "Unknown"
+        if submission.publisher_id == "other" and submission.custom_publisher_name:
+            clean_publisher = " ".join(submission.custom_publisher_name.split()).title()
+        elif submission.publisher_id and submission.publisher_id != "other":
+            pub_doc = await db.publishers.find_one({"publisher_id": submission.publisher_id})
+            if pub_doc:
+                clean_publisher = pub_doc.get("name")
+
+        # Verifica se esse jornal JÁ EXISTE na lista oficial (evita duplicatas)
+        # As vezes o usuário digita "Nature" mas já existe na lista e ele não viu
+        existing_journal = await db.journals.find_one({
+            "name": clean_journal, 
+            "publisher_id": submission.publisher_id if submission.publisher_id != "other" else {"$exists": True}
+        })
+        
+        if existing_journal:
+            # Se já existe, usa o ID oficial e ignora o "custom"
+            final_journal_id = existing_journal["journal_id"]
+        else:
+            # Se não existe, adiciona aos CANDIDATOS
+            await db.journal_candidates.update_one(
+                { "name": clean_journal, "publisher_name": clean_publisher },
+                { "$inc": { "count": 1 } }, # Incrementa contador
+                upsert=True
+            )
+            
+            # REGRA DO 3: Verifica se merece promoção
+            candidate = await db.journal_candidates.find_one({ "name": clean_journal, "publisher_name": clean_publisher })
+            
+            if candidate and candidate["count"] >= 3:
+                # --- PROMOÇÃO! Vira um jornal oficial ---
+                
+                # 1. Garante/Cria o Publisher primeiro
+                promoted_publisher_id = submission.publisher_id
+                if submission.publisher_id == "other":
+                    # Verifica se o publisher já existe pelo nome
+                    existing_pub = await db.publishers.find_one({"name": clean_publisher})
+                    if existing_pub:
+                        promoted_publisher_id = existing_pub["publisher_id"]
+                    else:
+                        promoted_publisher_id = f"pub_{uuid.uuid4().hex[:12]}"
+                        await db.publishers.insert_one({
+                            "publisher_id": promoted_publisher_id,
+                            "name": clean_publisher,
+                            "is_user_added": False, # Agora é oficial
+                            "is_verified": True,
+                            "created_at": datetime.now(timezone.utc).isoformat()
+                        })
+
+                # 2. Cria o Jornal Oficial
+                new_journal_id = f"journal_{uuid.uuid4().hex[:12]}"
+                await db.journals.insert_one({
+                    "journal_id": new_journal_id,
+                    "name": clean_journal, 
+                    "publisher_id": promoted_publisher_id,
+                    "is_user_added": False, # Agora é oficial
+                    "is_verified": True,
+                    "open_access": submission.custom_journal_open_access,
+                    "added_at": datetime.now(timezone.utc).isoformat(),
+                    "source": "crowdsourced"
+                })
+                
+                # 3. Limpa dos candidatos
+                await db.journal_candidates.delete_one({ "name": clean_journal, "publisher_name": clean_publisher })
+                
+                # Atualiza o ID da submissão atual para usar o novo ID oficial
+                final_journal_id = new_journal_id
+                final_publisher_id = promoted_publisher_id
+            
+            else:
+                # Se ainda não foi promovido, cria um registro temporário "user added" para esta submissão específica
+                # Isso mantém o histórico sem poluir a lista global
+                temp_id = f"journal_user_{uuid.uuid4().hex[:12]}"
+                final_journal_id = temp_id
+                
+                # Opcional: Salvar na collection de journals mas marcado como hidden/unverified
+                # Aqui optamos por não salvar na main list até ser promovido, 
+                # mas salvamos o nome texto na submissão (veja abaixo)
+
+    # =========================================================================
+
     submission_id = f"sub_{uuid.uuid4().hex[:12]}"
     
-    publisher_id = submission.publisher_id
-    journal_id = submission.journal_id
-    
-    # ... (o restante do código da função continua igual daqui para baixo) ...
-    # Pode manter o resto:
-    # submission_doc = {
-    #     "submission_id": submission_id,
-    #     ...
-    
-    # Handle user-added publisher ("other")
-    if submission.publisher_id == "other" and submission.custom_publisher_name:
-        publisher_id = f"pub_user_{uuid.uuid4().hex[:12]}"
-        new_publisher = {
-            "publisher_id": publisher_id,
-            "name": submission.custom_publisher_name.strip(),
-            "is_user_added": True,
-            "is_verified": False,
-            "validated_submission_count": 0,
-            "added_by_hashed_id": user.hashed_id,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.publishers.insert_one(new_publisher)
-    
-    # Handle user-added journal ("other")
-    if submission.journal_id == "other" and submission.custom_journal_name:
-        journal_id = f"journal_user_{uuid.uuid4().hex[:12]}"
-        new_journal = {
-            "journal_id": journal_id,
-            "name": submission.custom_journal_name.strip(),
-            "publisher_id": publisher_id,
-            "is_user_added": True,
-            "is_verified": False,
-            "open_access": submission.custom_journal_open_access,
-            "apc_required": submission.custom_journal_apc_required,
-            "validated_submission_count": 0,
-            "added_by_hashed_id": user.hashed_id,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.journals.insert_one(new_journal)
-    
-    # Determine scientific_area from hierarchical fields (backwards compatibility)
+    # Determina área científica (compatibilidade legado)
     scientific_area = submission.scientific_area
     if submission.scientific_area_grande:
-        # Use hierarchical fields if provided
         scientific_area = submission.scientific_area_grande
         if submission.scientific_area_area:
             scientific_area = submission.scientific_area_area
         if submission.scientific_area_subarea:
             scientific_area = submission.scientific_area_subarea
     
-    # Validate submission for statistical validity
+    # Validação Estatística
     valid_for_stats, validation_flags = await validate_submission_for_stats(
-        user.hashed_id, journal_id, submission
+        user.hashed_id, final_journal_id, submission
     )
     
     submission_doc = {
         "submission_id": submission_id,
         "user_hashed_id": user.hashed_id,
-        # CNPq hierarchical scientific areas
-        "scientific_area": scientific_area,  # Most specific level selected
+        "scientific_area": scientific_area,
         "scientific_area_grande": submission.scientific_area_grande,
         "scientific_area_area": submission.scientific_area_area,
         "scientific_area_subarea": submission.scientific_area_subarea,
         "manuscript_type": submission.manuscript_type,
-        "journal_id": journal_id,
-        "publisher_id": publisher_id,
+        
+        # IDs resolvidos (oficiais ou temporários)
+        "journal_id": final_journal_id,
+        "publisher_id": final_publisher_id,
+        
+        # Salva o "snapshot" dos nomes digitados para referência futura
+        "custom_journal_name": submission.custom_journal_name if submission.journal_id == "other" else None,
+        "custom_publisher_name": submission.custom_publisher_name if submission.publisher_id == "other" else None,
+        
         "decision_type": submission.decision_type,
         "reviewer_count": submission.reviewer_count,
         "time_to_decision": submission.time_to_decision,
@@ -905,15 +1000,18 @@ async def create_submission(submission: SubmissionCreate, request: Request):
         "review_comments": submission.review_comments,
         "editor_comments": submission.editor_comments,
         "perceived_coherence": submission.perceived_coherence,
-        # NEW: Quality assessment fields
+        
+        # Campos de Qualidade
         "overall_review_quality": getattr(submission, 'overall_review_quality', None),
         "feedback_clarity": getattr(submission, 'feedback_clarity', None),
         "decision_fairness": getattr(submission, 'decision_fairness', None),
         "would_recommend": getattr(submission, 'would_recommend', None),
-        # CONDITIONAL FIELDS
+        
+        # Condicionais
         "journal_is_open_access": getattr(submission, 'journal_is_open_access', None),
         "editor_comments_quality": getattr(submission, 'editor_comments_quality', None),
-        # Metadata
+        
+        # Metadados
         "evidence_file_id": None,
         "status": "pending",
         "is_sample": False,
@@ -924,7 +1022,7 @@ async def create_submission(submission: SubmissionCreate, request: Request):
     
     await db.submissions.insert_one(submission_doc)
     
-    # Update user contribution count (trust score updated on validation, not submission)
+    # Atualiza contagem de contribuição do usuário
     await db.users.update_one(
         {"user_id": user.user_id},
         {"$inc": {"contribution_count": 1}}
