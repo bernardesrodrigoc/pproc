@@ -39,6 +39,11 @@ export default function SubmissionPage() {
   
   // Form data
   const [formData, setFormData] = useState({
+    // CNPq Hierarchical Scientific Areas
+    scientific_area_grande: '',
+    scientific_area_area: '',
+    scientific_area_subarea: '',
+    // Legacy field (kept for backwards compatibility)
     scientific_area: '',
     manuscript_type: '',
     publisher_id: '',
@@ -59,15 +64,25 @@ export default function SubmissionPage() {
     custom_publisher_name: '',
     custom_journal_name: '',
     custom_journal_open_access: null,
-    custom_journal_apc_required: ''
+    custom_journal_apc_required: '',
+    // CONDITIONAL FIELDS
+    journal_is_open_access: null,
+    editor_comments_quality: null
   });
   
   const [evidenceFile, setEvidenceFile] = useState(null);
   const [submissionId, setSubmissionId] = useState(null);
   
+  // CNPq hierarchical options
+  const [cnpqOptions, setCnpqOptions] = useState({
+    grandeAreas: [],
+    areas: [],
+    subareas: []
+  });
+  
   // Options from API
   const [options, setOptions] = useState({
-    scientificAreas: [],
+    scientificAreas: [], // Legacy
     manuscriptTypes: [],
     decisionTypes: [],
     reviewerCounts: [],
