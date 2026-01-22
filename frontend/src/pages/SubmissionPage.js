@@ -797,6 +797,12 @@ export default function SubmissionPage() {
                   <Label className="text-stone-700 font-medium mb-3 block">
                     {t('submission.reviewComments')}
                   </Label>
+                  {/* Conditional note for desk rejects */}
+                  {formData.decision_type === 'desk_reject' && (
+                    <p className="text-sm text-amber-600 mb-2">
+                      Nota: Para desk reject, este campo pode ficar vazio.
+                    </p>
+                  )}
                   <div className="space-y-3">
                     {options.reviewCommentTypes.map(type => (
                       <div key={type.id} className="flex items-center space-x-2">
@@ -817,7 +823,13 @@ export default function SubmissionPage() {
                   </Label>
                   <RadioGroup 
                     value={formData.editor_comments}
-                    onValueChange={(v) => updateFormData('editor_comments', v)}
+                    onValueChange={(v) => {
+                      updateFormData('editor_comments', v);
+                      // Reset editor quality if no comments
+                      if (v === 'no') {
+                        updateFormData('editor_comments_quality', null);
+                      }
+                    }}
                     className="space-y-2"
                   >
                     {options.editorCommentTypes.map(type => (
@@ -828,6 +840,39 @@ export default function SubmissionPage() {
                     ))}
                   </RadioGroup>
                 </div>
+
+                {/* CONDITIONAL: Editor Comments Quality - Only show if editor provided comments */}
+                {formData.editor_comments && formData.editor_comments !== 'no' && (
+                  <div className="border-l-4 border-blue-400 pl-4 bg-blue-50/50 py-4 rounded-r">
+                    <Label className="text-stone-700 font-medium mb-3 block">
+                      Qualidade dos Comentários do Editor
+                    </Label>
+                    <p className="text-sm text-stone-500 mb-3">
+                      Como você avalia a qualidade dos comentários fornecidos pelo editor?
+                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      {[1, 2, 3, 4, 5].map(value => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => updateFormData('editor_comments_quality', value)}
+                          className={`flex-1 py-3 px-2 rounded-lg border-2 transition-all text-center ${
+                            formData.editor_comments_quality === value
+                              ? 'border-blue-500 bg-blue-50 text-blue-800'
+                              : 'border-stone-200 hover:border-stone-300 text-stone-600'
+                          }`}
+                          data-testid={`editor-quality-${value}`}
+                        >
+                          <span className="text-sm font-medium">{value}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex justify-between text-xs text-stone-500 mt-1">
+                      <span>Muito baixa</span>
+                      <span>Muito alta</span>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <Label className="text-stone-700 font-medium mb-3 block">
