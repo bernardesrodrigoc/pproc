@@ -136,6 +136,69 @@ export default function AdminPage() {
     }
   }, [isAdmin, activeTab]);
 
+  // Fetch areas for management
+  useEffect(() => {
+    const fetchGrandeAreas = async () => {
+      setLoadingAreas(true);
+      try {
+        const response = await fetch(`${API}/options/cnpq/grande-areas`);
+        if (response.ok) {
+          const data = await response.json();
+          setGrandeAreas(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch grande areas:', error);
+      }
+      setLoadingAreas(false);
+    };
+
+    if (isAdmin && activeTab === 'areas') {
+      fetchGrandeAreas();
+    }
+  }, [isAdmin, activeTab]);
+
+  // Fetch areas when grande area is selected
+  useEffect(() => {
+    const fetchAreas = async () => {
+      if (selectedGrandeArea) {
+        try {
+          const response = await fetch(`${API}/options/cnpq/areas/${selectedGrandeArea}`);
+          if (response.ok) {
+            const data = await response.json();
+            setAreas(data);
+          }
+        } catch (error) {
+          console.error('Failed to fetch areas:', error);
+        }
+      } else {
+        setAreas([]);
+      }
+      setSelectedArea(null);
+      setSubareas([]);
+    };
+    fetchAreas();
+  }, [selectedGrandeArea]);
+
+  // Fetch subareas when area is selected
+  useEffect(() => {
+    const fetchSubareas = async () => {
+      if (selectedArea) {
+        try {
+          const response = await fetch(`${API}/options/cnpq/subareas/${selectedArea}`);
+          if (response.ok) {
+            const data = await response.json();
+            setSubareas(data);
+          }
+        } catch (error) {
+          console.error('Failed to fetch subareas:', error);
+        }
+      } else {
+        setSubareas([]);
+      }
+    };
+    fetchSubareas();
+  }, [selectedArea]);
+
   // Fetch submissions
   useEffect(() => {
     const fetchSubmissions = async () => {
