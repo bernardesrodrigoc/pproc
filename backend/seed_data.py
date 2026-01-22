@@ -229,17 +229,17 @@ async def seed_publishers_and_journals():
 
 
 async def seed_sample_submissions(count: int = 500):
-    """Seed sample submission data"""
+    """Seed sample submission data - ALL FLAGGED AS is_sample=True"""
     print(f"Seeding {count} sample submissions...")
     
-    # Clear existing submissions
-    await db.submissions.delete_many({})
+    # Clear existing SAMPLE submissions only
+    await db.submissions.delete_many({"is_sample": True})
     
     # Get all journals and publishers
     publishers = await db.publishers.find({}, {"_id": 0}).to_list(100)
     journals = await db.journals.find({}, {"_id": 0}).to_list(1000)
     
-    # Create sample anonymous users
+    # Create sample anonymous users (flagged as sample)
     sample_users = []
     for i in range(50):
         hashed_id = hashlib.sha256(f"sample_user_{i}".encode()).hexdigest()[:16]
@@ -288,7 +288,7 @@ async def seed_sample_submissions(count: int = 500):
             coherence = random.choices(COHERENCE_OPTIONS, weights=[0.5, 0.35, 0.15])[0]
         
         submission = {
-            "submission_id": f"sub_{uuid.uuid4().hex[:12]}",
+            "submission_id": f"sub_sample_{uuid.uuid4().hex[:12]}",
             "user_hashed_id": random.choice(sample_users),
             "scientific_area": random.choice(SCIENTIFIC_AREAS),
             "manuscript_type": random.choice(MANUSCRIPT_TYPES),
@@ -303,6 +303,7 @@ async def seed_sample_submissions(count: int = 500):
             "perceived_coherence": coherence,
             "evidence_file_id": None,
             "status": "validated",
+            "is_sample": True,  # CRITICAL: Flag as sample data
             "created_at": (datetime.now(timezone.utc) - timedelta(days=random.randint(1, 365))).isoformat()
         }
         submissions.append(submission)
@@ -312,7 +313,7 @@ async def seed_sample_submissions(count: int = 500):
     for i in range(0, len(submissions), batch_size):
         batch = submissions[i:i+batch_size]
         await db.submissions.insert_many(batch)
-        print(f"  Inserted {min(i+batch_size, len(submissions))}/{count} submissions")
+        print(f"  Inserted {min(i+batch_size, len(submissions))}/{count} sample submissions")
     
     print("Sample submissions seeded successfully!")
 
