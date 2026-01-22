@@ -3,6 +3,8 @@
 ## Original Problem Statement
 Build a global, anonymous, data-driven platform that aggregates editorial decision statistics from scientific journals, focusing on process transparency, not individual complaints.
 
+**Platform Positioning:** An infrastructure for data analysis of the scientific editorial process - capturing positive, neutral, and negative experiences equally.
+
 ## Architecture
 - **Frontend**: React 19 + TailwindCSS + Shadcn UI + Recharts
 - **Backend**: FastAPI (Python)
@@ -23,9 +25,35 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 - [x] K-anonymity (min 5 cases for public display)
 - [x] Multi-dimensional scores (Transparency, Review Depth, Editorial Effort, Consistency)
 - [x] i18n support (EN/PT/ES)
-- [x] **Controlled Data Visibility System** (NEW Jan 22, 2026)
+- [x] **Controlled Data Visibility System** ✅
+- [x] **Quality Assessment System** ✅ (NEW Jan 22, 2026)
 
-## Data Visibility System (NEW)
+## Quality Assessment System (NEW Jan 22, 2026)
+
+### New Submission Fields (Neutral Language)
+- **overall_review_quality**: 1-5 scale (Very Low → Very High)
+- **feedback_clarity**: 1-5 scale (Very Unclear → Very Clear)
+- **decision_fairness**: agree / neutral / disagree
+- **would_recommend**: yes / neutral / no
+
+### Quality Indices (Aggregated)
+- **Average Review Quality Score**: Mean of overall_review_quality (0-100 scale)
+- **Feedback Clarity Index**: Mean of feedback_clarity (0-100 scale)
+- **Decision Fairness Index**: % reporting decision aligned with feedback
+- **Recommendation Index**: % who would recommend based on editorial process
+
+### Submission Validation (`valid_for_stats`)
+- **Completeness check**: All required fields present
+- **Consistency check**: No contradictory responses (e.g., detailed comments with 0 reviewers)
+- **Duplicate check**: No submissions to same journal within 30 days
+- Flagged submissions excluded from aggregated statistics
+
+### Messaging Tone (Institutional/Neutral)
+- Portuguese professional language
+- No language suggesting platform is "empty" or "in testing"
+- Example: "As estatísticas agregadas são exibidas automaticamente quando há volume mínimo de dados para garantir interpretação adequada."
+
+## Data Visibility System
 
 ### Three Visibility Modes
 1. **User-Only (Mode A)** - Default
@@ -57,7 +85,7 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 
 ### Backend APIs
 - Auth: `/api/auth/session`, `/api/auth/me`, `/api/auth/logout`, `/api/auth/orcid/*`
-- Users: `/api/users/profile`, `/api/users/my-insights` (NEW)
+- Users: `/api/users/profile`, `/api/users/my-insights`
 - Submissions: `/api/submissions`, `/api/submissions/my`, `/api/submissions/{id}/evidence`
 - Publishers/Journals: `/api/publishers`, `/api/journals`
 - Analytics: `/api/analytics/overview`, `/api/analytics/publishers`, `/api/analytics/journals`, `/api/analytics/areas`, `/api/analytics/visibility-status` (NEW)
