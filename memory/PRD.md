@@ -190,12 +190,11 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 - [ ] Integration with journal databases
 
 ## Next Tasks
-1. Admin: Manage CNPq hierarchical areas (edit, activate/deactivate)
-2. Implement journal normalization workflow for user-added entries
-3. Add email notifications for submission validation
-4. Export analytics data functionality (CSV/JSON)
-5. Optional account linking for users with both Google and ORCID
-6. Fix admin dashboard screenshot test (authentication issue)
+1. Implement journal normalization workflow for user-added entries
+2. Add email notifications for submission validation
+3. Export analytics data functionality (CSV/JSON)
+4. Optional account linking for users with both Google and ORCID
+5. Fix admin dashboard screenshot test (authentication issue)
 
 ## Completed This Session (Jan 22, 2026)
 - ✅ ORCID OAuth 2.0 fix - now uses environment-driven redirect_uri
@@ -212,13 +211,22 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
   - New Quality Indices: Average Review Quality, Feedback Clarity Index, Decision Fairness Index, Recommendation Index
   - Submission validation with `valid_for_stats` flag (completeness, consistency, duplicate detection)
   - Institutional/neutral Portuguese messaging throughout
-- ✅ **CNPq Hierarchical Scientific Areas** (NEW):
-  - 9 Grande Áreas, ~80 Áreas, ~400 Subáreas based on official CNPq table
-  - Cascading dropdowns in Step 1: Grande Área → Área → Subárea
+- ✅ **Hierarchical Scientific Areas** (Updated):
+  - 9 Major Areas (Grande Áreas), ~80 Areas, ~400 Subareas
+  - Cascading dropdowns in Step 1: Major Area → Area → Subarea
   - New endpoints: /api/options/cnpq/grande-areas, /areas/{code}, /subareas/{code}, /lookup/{code}
   - Backwards compatible with legacy scientific_area field
-- ✅ **Conditional Form Logic** (NEW):
+- ✅ **Conditional Form Logic**:
   - Open Access question controls APC visibility (Step 3)
   - Editor comments quality only appears if editor provided comments (Step 4)
   - Backend validation rejects logically inconsistent submissions
-- ✅ All 26 backend tests passing (100%) - iteration_7.json
+- ✅ **i18n Complete Translations** (Updated):
+  - All new form fields fully translated in EN/PT/ES
+  - Hierarchical area labels, conditional field labels, quality assessment descriptions
+  - Language switching works correctly across entire form
+- ✅ **Admin Areas Management Tab** (NEW):
+  - New "Areas" tab in Admin dashboard
+  - Hierarchy viewer: Major Area → Area → Subarea
+  - Statistics summary showing counts at each level
+  - Read-only view with future edit capability noted
+- ✅ All 22 e2e tests passing (100%) - iteration_8.json
