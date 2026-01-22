@@ -905,21 +905,64 @@ async def get_my_submissions(request: Request):
 
 K_ANONYMITY_THRESHOLD = 5  # Minimum cases for public display
 
+@api_router.get("/analytics/visibility-status")
+async def get_visibility_status():
+    """Get current platform visibility status for frontend banner logic"""
+    settings = await get_platform_settings()
+    
+    return {
+        "visibility_mode": settings.get("visibility_mode", "user_only"),
+        "public_stats_enabled": settings.get("public_stats_enabled", False),
+        "demo_mode_enabled": settings.get("demo_mode_enabled", True),
+        "message": get_visibility_message(settings)
+    }
+
+def get_visibility_message(settings: dict) -> Optional[str]:
+    """Generate appropriate message based on visibility settings"""
+    mode = settings.get("visibility_mode", "user_only")
+    public_enabled = settings.get("public_stats_enabled", False)
+    
+    if mode == "user_only":
+        return "Statistics will be published once sufficient anonymized submissions are collected."
+    elif mode == "threshold_based" and not public_enabled:
+        return "Public statistics are being collected. Your contribution helps improve transparency in scholarly publishing."
+    elif mode == "admin_forced" and not public_enabled:
+        return "Public statistics are currently under review."
+    return None
+
 @api_router.get("/analytics/overview")
 async def get_analytics_overview():
     """Get overall platform statistics"""
-    total_submissions = await db.submissions.count_documents({"status": {"$ne": "flagged"}})
+    settings = await get_platform_settings()
+    base_query = await get_submission_base_query(settings)
+    
+    # Check if public stats should be shown
+    mode = settings.get("visibility_mode", "user_only")
+    public_enabled = settings.get("public_stats_enabled", False)
+    
+    # Count total submissions (respecting demo mode)
+    total_submissions = await db.submissions.count_documents(base_query)
+    
+    # For user_only mode, return minimal info
+    if mode == "user_only" and not public_enabled:
+        return {
+            "total_submissions": total_submissions,
+            "sufficient_data": False,
+            "visibility_restricted": True,
+            "message": get_visibility_message(settings)
+        }
     
     if total_submissions < K_ANONYMITY_THRESHOLD:
         return {
             "total_submissions": total_submissions,
             "sufficient_data": False,
-            "message": "Insufficient data for aggregated statistics"
+            "visibility_restricted": False,
+            "message": "Statistics will be published once sufficient anonymized submissions are collected."
         }
     
     # Decision type distribution
     decision_pipeline = [
-        {"$match": {"status": {"$ne": "flagged"}}},
+        {"$match": base_query},
         {"$group": {"_id": "$decision_type", "count": {"$sum": 1}}},
         {"$match": {"count": {"$gte": K_ANONYMITY_THRESHOLD}}}
     ]
@@ -927,7 +970,7 @@ async def get_analytics_overview():
     
     # Reviewer count distribution
     reviewer_pipeline = [
-        {"$match": {"status": {"$ne": "flagged"}}},
+        {"$match": base_query},
         {"$group": {"_id": "$reviewer_count", "count": {"$sum": 1}}},
         {"$match": {"count": {"$gte": K_ANONYMITY_THRESHOLD}}}
     ]
@@ -935,7 +978,7 @@ async def get_analytics_overview():
     
     # Time to decision distribution
     time_pipeline = [
-        {"$match": {"status": {"$ne": "flagged"}}},
+        {"$match": base_query},
         {"$group": {"_id": "$time_to_decision", "count": {"$sum": 1}}},
         {"$match": {"count": {"$gte": K_ANONYMITY_THRESHOLD}}}
     ]
@@ -944,6 +987,7 @@ async def get_analytics_overview():
     return {
         "total_submissions": total_submissions,
         "sufficient_data": True,
+        "visibility_restricted": False,
         "decision_distribution": {d["_id"]: d["count"] for d in decision_dist},
         "reviewer_distribution": {d["_id"]: d["count"] for d in reviewer_dist},
         "time_distribution": {d["_id"]: d["count"] for d in time_dist}
@@ -951,7 +995,17 @@ async def get_analytics_overview():
 
 @api_router.get("/analytics/publishers")
 async def get_publisher_analytics():
-    """Get publisher-level analytics (only verified publishers)"""
+    """Get publisher-level analytics (only verified publishers, respects visibility settings)"""
+    settings = await get_platform_settings()
+    base_query = await get_submission_base_query(settings)
+    
+    # Check visibility mode
+    mode = settings.get("visibility_mode", "user_only")
+    public_enabled = settings.get("public_stats_enabled", False)
+    
+    if mode == "user_only" and not public_enabled:
+        return []  # No public publisher stats in user_only mode
+    
     # Get list of verified publisher IDs
     verified_publishers = await db.publishers.find(
         {"$or": [{"is_verified": True}, {"is_verified": {"$exists": False}}]},
