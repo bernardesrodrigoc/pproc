@@ -26,9 +26,45 @@ Build a global, anonymous, data-driven platform that aggregates editorial decisi
 - [x] Multi-dimensional scores (Transparency, Review Depth, Editorial Effort, Consistency)
 - [x] i18n support (EN/PT/ES)
 - [x] **Controlled Data Visibility System** ✅
-- [x] **Quality Assessment System** ✅ (NEW Jan 22, 2026)
+- [x] **Quality Assessment System** ✅ (Jan 22, 2026)
+- [x] **CNPq Hierarchical Scientific Areas** ✅ (Jan 22, 2026)
+- [x] **Conditional Form Logic** ✅ (Jan 22, 2026)
 
-## Quality Assessment System (NEW Jan 22, 2026)
+## CNPq Hierarchical Scientific Areas (NEW Jan 22, 2026)
+
+### Three-Level Hierarchy (Based on Official CNPq Table)
+1. **Grande Área** (9 options): Top-level classification (e.g., "Ciências Exatas e da Terra")
+2. **Área** (~80 options): Mid-level (e.g., "1.01 - Matemática")
+3. **Subárea** (~400 options): Specific field (e.g., "1.01.01 - Álgebra")
+
+### API Endpoints
+- `GET /api/options/cnpq/grande-areas` - Returns all 9 Grande Áreas
+- `GET /api/options/cnpq/areas/{code}` - Returns Áreas for given Grande Área
+- `GET /api/options/cnpq/subareas/{code}` - Returns Subáreas for given Área
+- `GET /api/options/cnpq/lookup/{code}` - Lookup any area by full code
+
+### Form Implementation
+- Cascading dropdowns: Grande Área → Área → Subárea
+- Grande Área and Área are required
+- Subárea is optional (some Áreas don't have Subáreas)
+
+## Conditional Form Logic (NEW Jan 22, 2026)
+
+### Open Access → APC Questions
+- Question "O periódico é Open Access?" in Step 3
+- APC range questions only appear if answer is "Sim"
+- Non-Open Access journals automatically set `apc_range: "no_apc"`
+
+### Editor Comments → Quality Rating
+- If `editor_comments = "no"`, the editor quality rating is hidden
+- Backend validation rejects `editor_comments_quality` when no comments were provided
+
+### Backend Validation (validate_submission_for_stats)
+- Checks logical consistency of conditional fields
+- Flags inconsistent submissions (e.g., APC for non-open access)
+- Only consistent submissions are included in aggregated statistics
+
+## Quality Assessment System (Jan 22, 2026)
 
 ### New Submission Fields (Neutral Language)
 - **overall_review_quality**: 1-5 scale (Very Low → Very High)
