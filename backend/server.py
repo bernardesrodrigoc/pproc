@@ -2055,56 +2055,11 @@ async def get_admin_areas(request: Request):
     """Get all scientific areas for admin management"""
     await require_admin(request)
     
-    # Get areas from DB, or initialize from static data if empty
-    areas = await db.scientific_areas.find({}, {"_id": 0}).to_list(1000)
+    # Ensure areas are initialized
+    await ensure_areas_initialized()
     
-    if not areas:
-        # Initialize from static data
-        from data.cnpq_areas import CNPQ_AREAS
-        
-        areas_to_insert = []
-        for ga_code, ga_data in CNPQ_AREAS.items():
-            # Insert Grande Área
-            areas_to_insert.append({
-                "code": ga_code,
-                "name": ga_data["name"],
-                "name_en": ga_data["name_en"],
-                "level": "grande_area",
-                "parent_code": None,
-                "is_active": True,
-                "submission_count": 0,
-                "created_at": datetime.now(timezone.utc).isoformat()
-            })
-            
-            # Insert Áreas
-            for area_code, area_data in ga_data["areas"].items():
-                areas_to_insert.append({
-                    "code": area_code,
-                    "name": area_data["name"],
-                    "name_en": area_data["name_en"],
-                    "level": "area",
-                    "parent_code": ga_code,
-                    "is_active": True,
-                    "submission_count": 0,
-                    "created_at": datetime.now(timezone.utc).isoformat()
-                })
-                
-                # Insert Subáreas
-                for subarea in area_data.get("subareas", []):
-                    areas_to_insert.append({
-                        "code": subarea["code"],
-                        "name": subarea["name"],
-                        "name_en": subarea["name_en"],
-                        "level": "subarea",
-                        "parent_code": area_code,
-                        "is_active": True,
-                        "submission_count": 0,
-                        "created_at": datetime.now(timezone.utc).isoformat()
-                    })
-        
-        if areas_to_insert:
-            await db.scientific_areas.insert_many(areas_to_insert)
-            areas = areas_to_insert
+    # Get areas from DB
+    areas = await db.scientific_areas.find({}, {"_id": 0}).to_list(1000)
     
     # Group by level for easier frontend rendering
     grande_areas = [a for a in areas if a["level"] == "grande_area"]
