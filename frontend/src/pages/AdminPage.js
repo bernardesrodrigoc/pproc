@@ -1165,6 +1165,126 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Diagnostics Panel - Full Width */}
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="text-lg font-serif flex items-center">
+                  <Eye className="w-5 h-5 mr-2" />
+                  Data Diagnostics & Visibility Status
+                </CardTitle>
+                <CardDescription>
+                  Real-time view of data status and visibility conditions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingDiagnostics ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-stone-400" />
+                  </div>
+                ) : diagnostics ? (
+                  <div className="space-y-6">
+                    {/* Data Summary */}
+                    <div>
+                      <h4 className="font-medium text-stone-700 mb-3">Data Summary</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <div className="text-center p-3 bg-stone-50 rounded-lg">
+                          <p className="text-2xl font-bold text-stone-900">{diagnostics.data_summary.total_submissions}</p>
+                          <p className="text-xs text-stone-500">Total Submissions</p>
+                        </div>
+                        <div className="text-center p-3 bg-amber-50 rounded-lg">
+                          <p className="text-2xl font-bold text-amber-700">{diagnostics.data_summary.sample_submissions}</p>
+                          <p className="text-xs text-amber-600">Sample Data</p>
+                        </div>
+                        <div className="text-center p-3 bg-blue-50 rounded-lg">
+                          <p className="text-2xl font-bold text-blue-700">{diagnostics.data_summary.real_submissions}</p>
+                          <p className="text-xs text-blue-600">Real Submissions</p>
+                        </div>
+                        <div className="text-center p-3 bg-green-50 rounded-lg">
+                          <p className="text-2xl font-bold text-green-700">{diagnostics.data_summary.valid_real_submissions}</p>
+                          <p className="text-xs text-green-600">Valid for Stats</p>
+                        </div>
+                        <div className="text-center p-3 bg-purple-50 rounded-lg">
+                          <p className="text-2xl font-bold text-purple-700">{diagnostics.data_summary.unique_real_users}</p>
+                          <p className="text-xs text-purple-600">Unique Users</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Current Settings & Visibility Explanation */}
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="p-4 bg-stone-50 rounded-lg">
+                        <h4 className="font-medium text-stone-700 mb-2">Current Settings</h4>
+                        <div className="space-y-1 text-sm">
+                          <p><span className="text-stone-500">Mode:</span> <span className="font-medium">{diagnostics.platform_settings.visibility_mode}</span></p>
+                          <p><span className="text-stone-500">Public Stats:</span> <span className={`font-medium ${diagnostics.platform_settings.public_stats_enabled ? 'text-green-600' : 'text-red-600'}`}>{diagnostics.platform_settings.public_stats_enabled ? 'Enabled' : 'Disabled'}</span></p>
+                          <p><span className="text-stone-500">Demo Mode:</span> <span className={`font-medium ${diagnostics.platform_settings.demo_mode_enabled ? 'text-amber-600' : 'text-green-600'}`}>{diagnostics.platform_settings.demo_mode_enabled ? 'ON' : 'OFF'}</span></p>
+                          <p><span className="text-stone-500">Min Submissions:</span> <span className="font-medium">{diagnostics.platform_settings.min_submissions_per_journal}</span></p>
+                          <p><span className="text-stone-500">Min Users:</span> <span className="font-medium">{diagnostics.platform_settings.min_unique_users_per_journal}</span></p>
+                        </div>
+                      </div>
+                      <div className="p-4 bg-blue-50 rounded-lg">
+                        <h4 className="font-medium text-blue-800 mb-2">Visibility Logic</h4>
+                        <p className="text-sm text-blue-700">{diagnostics.visibility_summary.visibility_mode_explanation}</p>
+                      </div>
+                    </div>
+
+                    {/* Journal Visibility Status */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium text-stone-700">Journal Visibility Status</h4>
+                        <div className="flex gap-2">
+                          <Badge variant="outline" className="bg-green-50 text-green-700">
+                            {diagnostics.visibility_summary.visible_journals} Visible
+                          </Badge>
+                          <Badge variant="outline" className="bg-red-50 text-red-700">
+                            {diagnostics.visibility_summary.hidden_journals} Hidden
+                          </Badge>
+                        </div>
+                      </div>
+                      {diagnostics.journal_details.length > 0 ? (
+                        <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
+                          {diagnostics.journal_details.map(journal => (
+                            <div 
+                              key={journal.journal_id}
+                              className={`p-3 flex items-center justify-between ${journal.visible ? 'bg-green-50/50' : 'bg-stone-50'}`}
+                            >
+                              <div>
+                                <p className="font-medium text-stone-800">{journal.journal_name}</p>
+                                <p className="text-xs text-stone-500">
+                                  {journal.submission_count} submissions, {journal.unique_users} users
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {journal.meets_submission_threshold ? (
+                                  <Badge className="bg-green-100 text-green-700 text-xs">✓ Subs</Badge>
+                                ) : (
+                                  <Badge className="bg-red-100 text-red-700 text-xs">✗ Subs</Badge>
+                                )}
+                                {journal.meets_user_threshold ? (
+                                  <Badge className="bg-green-100 text-green-700 text-xs">✓ Users</Badge>
+                                ) : (
+                                  <Badge className="bg-red-100 text-red-700 text-xs">✗ Users</Badge>
+                                )}
+                                <Badge variant={journal.visible ? "default" : "outline"} className={journal.visible ? "bg-green-600" : ""}>
+                                  {journal.visible ? 'Visible' : 'Hidden'}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-stone-500 italic py-4">
+                          No journals with valid real submissions yet.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-stone-500 italic">Failed to load diagnostics</p>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 
