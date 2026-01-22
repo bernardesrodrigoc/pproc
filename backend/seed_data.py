@@ -187,7 +187,7 @@ COHERENCE_OPTIONS = ["yes", "partially", "no"]
 
 
 async def seed_publishers_and_journals():
-    """Seed publishers and journals"""
+    """Seed publishers and journals (reference data, not sample)"""
     print("Seeding publishers and journals...")
     
     # Clear existing data
@@ -200,6 +200,10 @@ async def seed_publishers_and_journals():
         publisher_doc = {
             "publisher_id": publisher_id,
             "name": publisher_name,
+            "is_user_added": False,
+            "is_verified": True,  # Pre-seeded publishers are verified
+            "is_sample": False,  # Reference data, not sample
+            "validated_submission_count": 0,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.publishers.insert_one(publisher_doc)
@@ -212,6 +216,9 @@ async def seed_publishers_and_journals():
                 "name": journal_name,
                 "publisher_id": publisher_id,
                 "is_user_added": False,
+                "is_verified": True,  # Pre-seeded journals are verified
+                "is_sample": False,  # Reference data, not sample
+                "validated_submission_count": 0,
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
             await db.journals.insert_one(journal_doc)
