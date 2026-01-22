@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
 import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
+import { Switch } from '../components/ui/switch';
+import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
 import { 
   Shield, 
@@ -24,7 +26,13 @@ import {
   Loader2,
   Download,
   UserCog,
-  BarChart3
+  BarChart3,
+  Settings,
+  Database,
+  Trash2,
+  Globe,
+  Lock,
+  Unlock
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -42,6 +50,13 @@ export default function AdminPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(0);
   const [activeTab, setActiveTab] = useState('submissions');
+  
+  // Platform settings state
+  const [platformSettings, setPlatformSettings] = useState(null);
+  const [dataStats, setDataStats] = useState(null);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [purgingData, setPurgingData] = useState(false);
+  const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
   
   // Modal state
   const [selectedSubmission, setSelectedSubmission] = useState(null);
