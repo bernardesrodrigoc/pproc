@@ -152,6 +152,11 @@ class SubmissionCreate(BaseModel):
     review_comments: List[str]
     editor_comments: str
     perceived_coherence: str
+    # NEW: Quality assessment fields (neutral, captures positive/neutral/negative)
+    overall_review_quality: Optional[int] = None  # 1-5 scale
+    feedback_clarity: Optional[int] = None  # 1-5 scale
+    decision_fairness: Optional[str] = None  # agree / neutral / disagree
+    would_recommend: Optional[str] = None  # yes / neutral / no
     # User-added journal/publisher fields
     custom_journal_name: Optional[str] = None
     custom_publisher_name: Optional[str] = None
