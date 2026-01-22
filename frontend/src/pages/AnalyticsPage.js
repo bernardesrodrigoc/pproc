@@ -144,9 +144,9 @@ export default function AnalyticsPage() {
       <VisibilityBanner />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" data-testid="analytics-dashboard">
-        {/* Visibility Notice if restricted */}
+        {/* Professional Data Collection Panel if visibility restricted */}
         {overview?.visibility_restricted && (
-          <VisibilityNotice message={overview.message} className="mb-6" />
+          <DataCollectionPanel className="mb-8" />
         )}
 
         {/* Header */}
