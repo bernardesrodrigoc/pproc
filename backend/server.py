@@ -231,7 +231,10 @@ async def get_submission_base_query(settings: dict, include_sample: bool = None)
     Returns:
         MongoDB query dict
     """
-    query = {"status": {"$ne": "flagged"}}
+    query = {
+        "status": {"$ne": "flagged"},
+        "valid_for_stats": {"$ne": False}  # Only include statistically valid submissions
+    }
     
     # Determine if we should include sample data
     if include_sample is None:
