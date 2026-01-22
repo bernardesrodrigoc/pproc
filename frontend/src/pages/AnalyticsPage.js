@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import VisibilityBanner, { VisibilityNotice } from '../components/VisibilityBanner';
+import VisibilityBanner, { VisibilityNotice, DataCollectionPanel } from '../components/VisibilityBanner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
