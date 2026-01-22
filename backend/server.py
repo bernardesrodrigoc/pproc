@@ -1843,6 +1843,306 @@ async def purge_sample_data(request: Request):
         }
     }
 
+# --- Admin Diagnostics Panel ---
+
+@api_router.get("/admin/diagnostics")
+async def get_admin_diagnostics(request: Request):
+    """Get comprehensive diagnostics for visibility and data status"""
+    await require_admin(request)
+    
+    settings = await get_platform_settings()
+    
+    # Submission counts by type
+    total_submissions = await db.submissions.count_documents({})
+    sample_submissions = await db.submissions.count_documents({"is_sample": True})
+    real_submissions = await db.submissions.count_documents({"is_sample": {"$ne": True}})
+    valid_real_submissions = await db.submissions.count_documents({
+        "is_sample": {"$ne": True},
+        "valid_for_stats": True
+    })
+    invalid_real_submissions = await db.submissions.count_documents({
+        "is_sample": {"$ne": True},
+        "valid_for_stats": {"$ne": True}
+    })
+    
+    # Unique real users
+    unique_real_users_pipeline = [
+        {"$match": {"is_sample": {"$ne": True}}},
+        {"$group": {"_id": "$user_hashed_id"}},
+        {"$count": "count"}
+    ]
+    unique_result = await db.submissions.aggregate(unique_real_users_pipeline).to_list(1)
+    unique_real_users = unique_result[0]["count"] if unique_result else 0
+    
+    # Journal visibility status
+    min_subs = settings.get("min_submissions_per_journal", 3)
+    min_users = settings.get("min_unique_users_per_journal", 3)
+    
+    # Get journals with real submissions and their visibility status
+    journal_status_pipeline = [
+        {"$match": {"is_sample": {"$ne": True}, "valid_for_stats": True}},
+        {"$group": {
+            "_id": "$journal_id",
+            "submission_count": {"$sum": 1},
+            "unique_users": {"$addToSet": "$user_hashed_id"}
+        }},
+        {"$project": {
+            "journal_id": "$_id",
+            "submission_count": 1,
+            "unique_users_count": {"$size": "$unique_users"}
+        }},
+        {"$sort": {"submission_count": -1}},
+        {"$limit": 50}
+    ]
+    
+    journal_statuses = []
+    async for doc in db.submissions.aggregate(journal_status_pipeline):
+        journal = await db.journals.find_one({"journal_id": doc["_id"]}, {"_id": 0, "name": 1})
+        journal_name = journal["name"] if journal else "Unknown"
+        
+        meets_subs = doc["submission_count"] >= min_subs
+        meets_users = doc["unique_users_count"] >= min_users
+        threshold_met = meets_subs and meets_users
+        
+        # Check visibility based on mode
+        mode = settings.get("visibility_mode", "user_only")
+        public_enabled = settings.get("public_stats_enabled", False)
+        
+        if mode == "user_only":
+            visible = False
+            reason = "user_only_mode"
+        elif mode == "admin_forced":
+            visible = public_enabled
+            reason = "admin_forced"
+        else:  # threshold_based
+            visible = threshold_met and public_enabled
+            reason = "threshold_met" if threshold_met else "below_threshold"
+        
+        journal_statuses.append({
+            "journal_id": doc["_id"],
+            "journal_name": journal_name,
+            "submission_count": doc["submission_count"],
+            "unique_users": doc["unique_users_count"],
+            "meets_submission_threshold": meets_subs,
+            "meets_user_threshold": meets_users,
+            "threshold_met": threshold_met,
+            "visible": visible,
+            "visibility_reason": reason
+        })
+    
+    # Count visible vs hidden journals
+    visible_journals = sum(1 for j in journal_statuses if j["visible"])
+    hidden_journals = sum(1 for j in journal_statuses if not j["visible"])
+    
+    return {
+        "platform_settings": {
+            "visibility_mode": settings.get("visibility_mode", "user_only"),
+            "public_stats_enabled": settings.get("public_stats_enabled", False),
+            "demo_mode_enabled": settings.get("demo_mode_enabled", True),
+            "min_submissions_per_journal": min_subs,
+            "min_unique_users_per_journal": min_users
+        },
+        "data_summary": {
+            "total_submissions": total_submissions,
+            "sample_submissions": sample_submissions,
+            "real_submissions": real_submissions,
+            "valid_real_submissions": valid_real_submissions,
+            "invalid_real_submissions": invalid_real_submissions,
+            "unique_real_users": unique_real_users
+        },
+        "visibility_summary": {
+            "total_journals_with_real_data": len(journal_statuses),
+            "visible_journals": visible_journals,
+            "hidden_journals": hidden_journals,
+            "visibility_mode_explanation": {
+                "user_only": "Users only see their own data. No public statistics.",
+                "threshold_based": f"Stats visible when journal has >= {min_subs} submissions from >= {min_users} unique users.",
+                "admin_forced": "Admin controls visibility directly via public_stats_enabled toggle."
+            }[settings.get("visibility_mode", "user_only")]
+        },
+        "journal_details": journal_statuses
+    }
+
+# --- Scientific Areas Management (DB-backed) ---
+
+@api_router.get("/admin/areas")
+async def get_admin_areas(request: Request):
+    """Get all scientific areas for admin management"""
+    await require_admin(request)
+    
+    # Get areas from DB, or initialize from static data if empty
+    areas = await db.scientific_areas.find({}, {"_id": 0}).to_list(1000)
+    
+    if not areas:
+        # Initialize from static data
+        from data.cnpq_areas import CNPQ_AREAS
+        
+        areas_to_insert = []
+        for ga_code, ga_data in CNPQ_AREAS.items():
+            # Insert Grande Área
+            areas_to_insert.append({
+                "code": ga_code,
+                "name": ga_data["name"],
+                "name_en": ga_data["name_en"],
+                "level": "grande_area",
+                "parent_code": None,
+                "is_active": True,
+                "submission_count": 0,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            
+            # Insert Áreas
+            for area_code, area_data in ga_data["areas"].items():
+                areas_to_insert.append({
+                    "code": area_code,
+                    "name": area_data["name"],
+                    "name_en": area_data["name_en"],
+                    "level": "area",
+                    "parent_code": ga_code,
+                    "is_active": True,
+                    "submission_count": 0,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                })
+                
+                # Insert Subáreas
+                for subarea in area_data.get("subareas", []):
+                    areas_to_insert.append({
+                        "code": subarea["code"],
+                        "name": subarea["name"],
+                        "name_en": subarea["name_en"],
+                        "level": "subarea",
+                        "parent_code": area_code,
+                        "is_active": True,
+                        "submission_count": 0,
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    })
+        
+        if areas_to_insert:
+            await db.scientific_areas.insert_many(areas_to_insert)
+            areas = areas_to_insert
+    
+    # Group by level for easier frontend rendering
+    grande_areas = [a for a in areas if a["level"] == "grande_area"]
+    areas_list = [a for a in areas if a["level"] == "area"]
+    subareas = [a for a in areas if a["level"] == "subarea"]
+    
+    return {
+        "summary": {
+            "total": len(areas),
+            "grande_areas": len(grande_areas),
+            "areas": len(areas_list),
+            "subareas": len(subareas),
+            "active": sum(1 for a in areas if a.get("is_active", True)),
+            "inactive": sum(1 for a in areas if not a.get("is_active", True))
+        },
+        "grande_areas": sorted(grande_areas, key=lambda x: x["code"]),
+        "areas": sorted(areas_list, key=lambda x: x["code"]),
+        "subareas": sorted(subareas, key=lambda x: x["code"])
+    }
+
+class AreaCreate(BaseModel):
+    code: str
+    name: str
+    name_en: str
+    level: str  # grande_area, area, subarea
+    parent_code: Optional[str] = None
+
+class AreaUpdate(BaseModel):
+    name: Optional[str] = None
+    name_en: Optional[str] = None
+    is_active: Optional[bool] = None
+
+@api_router.post("/admin/areas")
+async def create_area(area: AreaCreate, request: Request):
+    """Create a new scientific area"""
+    await require_admin(request)
+    
+    # Validate level
+    if area.level not in ["grande_area", "area", "subarea"]:
+        raise HTTPException(status_code=400, detail="Invalid level")
+    
+    # Check if code already exists
+    existing = await db.scientific_areas.find_one({"code": area.code})
+    if existing:
+        raise HTTPException(status_code=400, detail="Area code already exists")
+    
+    # Validate parent exists if needed
+    if area.level in ["area", "subarea"] and area.parent_code:
+        parent = await db.scientific_areas.find_one({"code": area.parent_code})
+        if not parent:
+            raise HTTPException(status_code=400, detail="Parent area not found")
+    
+    area_doc = {
+        "code": area.code,
+        "name": area.name,
+        "name_en": area.name_en,
+        "level": area.level,
+        "parent_code": area.parent_code,
+        "is_active": True,
+        "submission_count": 0,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.scientific_areas.insert_one(area_doc)
+    del area_doc["_id"]
+    
+    return area_doc
+
+@api_router.put("/admin/areas/{code}")
+async def update_area(code: str, update: AreaUpdate, request: Request):
+    """Update a scientific area"""
+    await require_admin(request)
+    
+    area = await db.scientific_areas.find_one({"code": code})
+    if not area:
+        raise HTTPException(status_code=404, detail="Area not found")
+    
+    update_data = {}
+    if update.name is not None:
+        update_data["name"] = update.name
+    if update.name_en is not None:
+        update_data["name_en"] = update.name_en
+    if update.is_active is not None:
+        update_data["is_active"] = update.is_active
+    
+    if update_data:
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.scientific_areas.update_one({"code": code}, {"$set": update_data})
+    
+    updated = await db.scientific_areas.find_one({"code": code}, {"_id": 0})
+    return updated
+
+@api_router.delete("/admin/areas/{code}")
+async def delete_area(code: str, request: Request):
+    """Delete a scientific area (soft delete by setting is_active=False)"""
+    await require_admin(request)
+    
+    area = await db.scientific_areas.find_one({"code": code})
+    if not area:
+        raise HTTPException(status_code=404, detail="Area not found")
+    
+    # Check if area has submissions
+    submission_count = await db.submissions.count_documents({
+        "$or": [
+            {"scientific_area": code},
+            {"scientific_area_grande": code},
+            {"scientific_area_area": code},
+            {"scientific_area_subarea": code}
+        ]
+    })
+    
+    if submission_count > 0:
+        # Soft delete - just disable
+        await db.scientific_areas.update_one(
+            {"code": code},
+            {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        return {"message": f"Area disabled (has {submission_count} submissions)", "soft_delete": True}
+    else:
+        # Hard delete if no submissions
+        await db.scientific_areas.delete_one({"code": code})
+        return {"message": "Area deleted", "soft_delete": False}
+
 # --- Original Admin Stats ---
 
 @api_router.get("/admin/stats")
