@@ -141,8 +141,14 @@ export default function AnalyticsPage() {
   return (
     <div className="min-h-screen bg-[#FAFAF9]">
       <Navbar />
+      <VisibilityBanner />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" data-testid="analytics-dashboard">
+        {/* Visibility Notice if restricted */}
+        {overview?.visibility_restricted && (
+          <VisibilityNotice message={overview.message} className="mb-6" />
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="font-serif text-3xl md:text-4xl text-stone-900 mb-2">
