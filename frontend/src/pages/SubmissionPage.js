@@ -92,7 +92,8 @@ export default function SubmissionPage() {
       try {
         const [
           areas, types, decisions, reviewers, times, apcs, 
-          reviewComments, editorComments, coherence, publishers
+          reviewComments, editorComments, coherence, publishers,
+          reviewQuality, feedbackClarity, fairness, recommend
         ] = await Promise.all([
           fetch(`${API}/options/scientific-areas`).then(r => r.json()),
           fetch(`${API}/options/manuscript-types`).then(r => r.json()),
@@ -103,7 +104,11 @@ export default function SubmissionPage() {
           fetch(`${API}/options/review-comment-types`).then(r => r.json()),
           fetch(`${API}/options/editor-comment-types`).then(r => r.json()),
           fetch(`${API}/options/coherence-options`).then(r => r.json()),
-          fetch(`${API}/publishers`).then(r => r.json())
+          fetch(`${API}/publishers`).then(r => r.json()),
+          fetch(`${API}/options/review-quality-scale`).then(r => r.json()),
+          fetch(`${API}/options/feedback-clarity-scale`).then(r => r.json()),
+          fetch(`${API}/options/decision-fairness`).then(r => r.json()),
+          fetch(`${API}/options/would-recommend`).then(r => r.json())
         ]);
         
         setOptions({
@@ -117,7 +122,11 @@ export default function SubmissionPage() {
           editorCommentTypes: editorComments,
           coherenceOptions: coherence,
           publishers: publishers,
-          journals: []
+          journals: [],
+          reviewQualityScale: reviewQuality,
+          feedbackClarityScale: feedbackClarity,
+          decisionFairnessOptions: fairness,
+          wouldRecommendOptions: recommend
         });
       } catch (err) {
         console.error('Failed to fetch options:', err);
