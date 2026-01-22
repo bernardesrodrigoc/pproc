@@ -1271,15 +1271,6 @@ async def calculate_quality_indices(base_query: dict, total_count: int) -> dict:
         }
     
     return indices
-    
-    return {
-        "total_submissions": total_submissions,
-        "sufficient_data": True,
-        "visibility_restricted": False,
-        "decision_distribution": {d["_id"]: d["count"] for d in decision_dist},
-        "reviewer_distribution": {d["_id"]: d["count"] for d in reviewer_dist},
-        "time_distribution": {d["_id"]: d["count"] for d in time_dist}
-    }
 
 @api_router.get("/analytics/publishers")
 async def get_publisher_analytics():
