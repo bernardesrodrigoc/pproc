@@ -1068,7 +1068,17 @@ async def get_publisher_analytics():
 
 @api_router.get("/analytics/journals")
 async def get_journal_analytics(publisher_id: Optional[str] = None):
-    """Get journal-level analytics (only verified journals)"""
+    """Get journal-level analytics (only verified journals, respects visibility settings)"""
+    settings = await get_platform_settings()
+    base_query = await get_submission_base_query(settings)
+    
+    # Check visibility mode
+    mode = settings.get("visibility_mode", "user_only")
+    public_enabled = settings.get("public_stats_enabled", False)
+    
+    if mode == "user_only" and not public_enabled:
+        return []  # No public journal stats in user_only mode
+    
     # Get list of verified journal IDs
     journal_query = {"$or": [{"is_verified": True}, {"is_verified": {"$exists": False}}]}
     if publisher_id:
@@ -1080,7 +1090,7 @@ async def get_journal_analytics(publisher_id: Optional[str] = None):
     ).to_list(1000)
     verified_journal_ids = [j["journal_id"] for j in verified_journals]
     
-    match_stage = {"status": {"$ne": "flagged"}, "journal_id": {"$in": verified_journal_ids}}
+    match_stage = {**base_query, "journal_id": {"$in": verified_journal_ids}}
     if publisher_id:
         match_stage["publisher_id"] = publisher_id
     
