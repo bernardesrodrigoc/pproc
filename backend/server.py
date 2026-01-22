@@ -1359,6 +1359,145 @@ async def get_coherence_options():
 
 # ============== ADMIN ENDPOINTS ==============
 
+# --- Platform Settings ---
+
+@api_router.get("/admin/settings")
+async def get_admin_settings(request: Request):
+    """Get current platform settings"""
+    await require_admin(request)
+    settings = await get_platform_settings()
+    return settings
+
+@api_router.put("/admin/settings")
+async def update_admin_settings(update: PlatformSettingsUpdate, request: Request):
+    """Update platform settings"""
+    await require_admin(request)
+    
+    update_data = {}
+    if update.visibility_mode is not None:
+        if update.visibility_mode not in ["user_only", "threshold_based", "admin_forced"]:
+            raise HTTPException(status_code=400, detail="Invalid visibility mode")
+        update_data["visibility_mode"] = update.visibility_mode
+    
+    if update.demo_mode_enabled is not None:
+        update_data["demo_mode_enabled"] = update.demo_mode_enabled
+    
+    if update.public_stats_enabled is not None:
+        update_data["public_stats_enabled"] = update.public_stats_enabled
+    
+    if update.min_submissions_per_journal is not None:
+        if update.min_submissions_per_journal < 1:
+            raise HTTPException(status_code=400, detail="Minimum submissions must be at least 1")
+        update_data["min_submissions_per_journal"] = update.min_submissions_per_journal
+    
+    if update.min_unique_users_per_journal is not None:
+        if update.min_unique_users_per_journal < 1:
+            raise HTTPException(status_code=400, detail="Minimum unique users must be at least 1")
+        update_data["min_unique_users_per_journal"] = update.min_unique_users_per_journal
+    
+    if update_data:
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.platform_settings.update_one(
+            {"settings_id": "global"},
+            {"$set": update_data},
+            upsert=True
+        )
+    
+    settings = await get_platform_settings()
+    logger.info(f"Platform settings updated: {update_data}")
+    return settings
+
+@api_router.put("/admin/visibility/override")
+async def set_visibility_override(override: VisibilityOverride, request: Request):
+    """Set visibility override for a specific entity"""
+    await require_admin(request)
+    
+    if override.entity_type not in ["journal", "publisher", "area"]:
+        raise HTTPException(status_code=400, detail="Invalid entity type")
+    
+    # Map to plural form for storage
+    entity_key = f"{override.entity_type}s"
+    
+    await db.platform_settings.update_one(
+        {"settings_id": "global"},
+        {"$set": {f"visibility_overrides.{entity_key}.{override.entity_id}": override.force_visible}},
+        upsert=True
+    )
+    
+    logger.info(f"Visibility override set: {override.entity_type}/{override.entity_id} = {override.force_visible}")
+    return {"message": "Override set successfully", "entity_type": override.entity_type, "entity_id": override.entity_id, "force_visible": override.force_visible}
+
+@api_router.delete("/admin/visibility/override/{entity_type}/{entity_id}")
+async def remove_visibility_override(entity_type: str, entity_id: str, request: Request):
+    """Remove visibility override for a specific entity"""
+    await require_admin(request)
+    
+    if entity_type not in ["journal", "publisher", "area"]:
+        raise HTTPException(status_code=400, detail="Invalid entity type")
+    
+    entity_key = f"{entity_type}s"
+    
+    await db.platform_settings.update_one(
+        {"settings_id": "global"},
+        {"$unset": {f"visibility_overrides.{entity_key}.{entity_id}": ""}}
+    )
+    
+    return {"message": "Override removed successfully"}
+
+# --- Data Management ---
+
+@api_router.get("/admin/data/stats")
+async def get_data_stats(request: Request):
+    """Get sample vs real data statistics"""
+    await require_admin(request)
+    
+    total_submissions = await db.submissions.count_documents({})
+    sample_submissions = await db.submissions.count_documents({"is_sample": True})
+    real_submissions = await db.submissions.count_documents({"is_sample": {"$ne": True}})
+    
+    total_users = await db.users.count_documents({})
+    sample_users = await db.users.count_documents({"is_sample": True})
+    real_users = await db.users.count_documents({"is_sample": {"$ne": True}})
+    
+    return {
+        "submissions": {
+            "total": total_submissions,
+            "sample": sample_submissions,
+            "real": real_submissions
+        },
+        "users": {
+            "total": total_users,
+            "sample": sample_users,
+            "real": real_users
+        }
+    }
+
+@api_router.post("/admin/data/purge-sample")
+async def purge_sample_data(request: Request):
+    """Purge all sample data from the database"""
+    await require_admin(request)
+    
+    # Delete sample submissions
+    submissions_result = await db.submissions.delete_many({"is_sample": True})
+    
+    # Delete sample users (if any)
+    users_result = await db.users.delete_many({"is_sample": True})
+    
+    # Reset validated_submission_count on journals/publishers since sample data is gone
+    # Only if there's no real data for them
+    
+    logger.info(f"Sample data purged: {submissions_result.deleted_count} submissions, {users_result.deleted_count} users")
+    
+    return {
+        "message": "Sample data purged successfully",
+        "deleted": {
+            "submissions": submissions_result.deleted_count,
+            "users": users_result.deleted_count
+        }
+    }
+
+# --- Original Admin Stats ---
+
 @api_router.get("/admin/stats")
 async def get_admin_stats(request: Request):
     """Get admin dashboard statistics"""
@@ -1370,12 +1509,18 @@ async def get_admin_stats(request: Request):
     validated_submissions = await db.submissions.count_documents({"status": "validated"})
     flagged_submissions = await db.submissions.count_documents({"status": "flagged"})
     
+    # Add sample vs real breakdown
+    sample_submissions = await db.submissions.count_documents({"is_sample": True})
+    real_submissions = await db.submissions.count_documents({"is_sample": {"$ne": True}})
+    
     return {
         "total_users": total_users,
         "total_submissions": total_submissions,
         "pending_submissions": pending_submissions,
         "validated_submissions": validated_submissions,
-        "flagged_submissions": flagged_submissions
+        "flagged_submissions": flagged_submissions,
+        "sample_submissions": sample_submissions,
+        "real_submissions": real_submissions
     }
 
 @api_router.get("/admin/submissions")
