@@ -123,16 +123,22 @@ class Submission(BaseModel):
     reviewer_count: str
     time_to_decision: str
     apc_range: str
-    # Review characteristics
+    # Review characteristics (legacy)
     review_comments: List[str]
     editor_comments: str
     perceived_coherence: str
+    # NEW: Quality assessment fields (neutral, captures positive/neutral/negative)
+    overall_review_quality: Optional[int] = None  # 1-5 scale (very low → very high)
+    feedback_clarity: Optional[int] = None  # 1-5 scale (very unclear → very clear)
+    decision_fairness: Optional[str] = None  # agree / neutral / disagree
+    would_recommend: Optional[str] = None  # yes / neutral / no
     # Evidence (private)
     evidence_file_id: Optional[str] = None
     # Metadata
     created_at: datetime
     status: str = "pending"  # pending, validated, flagged
     is_sample: bool = False  # Flag for sample/demo data
+    valid_for_stats: bool = True  # Flag for statistical validity
 
 class SubmissionCreate(BaseModel):
     scientific_area: str
