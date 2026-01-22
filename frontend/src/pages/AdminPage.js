@@ -471,6 +471,10 @@ export default function AdminPage() {
               <Users className="w-4 h-4 mr-2" />
               Users
             </TabsTrigger>
+            <TabsTrigger value="areas" className="data-[state=active]:bg-stone-900 data-[state=active]:text-white">
+              <FolderTree className="w-4 h-4 mr-2" />
+              Areas
+            </TabsTrigger>
             <TabsTrigger value="settings" className="data-[state=active]:bg-stone-900 data-[state=active]:text-white">
               <Settings className="w-4 h-4 mr-2" />
               Settings
