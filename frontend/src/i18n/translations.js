@@ -142,7 +142,17 @@ const translations = {
       totalSubmissions: "Total Submissions",
       avgTransparency: "Avg. Transparency",
       avgReviewDepth: "Avg. Review Depth",
-      insufficientData: "Insufficient data for display (minimum 5 cases required for k-anonymity)",
+      insufficientData: "Data collection in progress",
+      dataCollectionTitle: "Aggregated Statistics — Data Collection in Progress",
+      dataCollectionMessage: "To ensure statistical reliability and protect contributor anonymity, public metrics are published only when sufficient independent observations are available.",
+      dataCollectionNote: "Your contribution has been recorded and will be included in aggregated analyses once publication thresholds are met.",
+      dataCollectionWhyTitle: "Why this approach?",
+      dataCollectionWhyList: [
+        "Protects contributor identity through aggregation",
+        "Ensures statistical robustness of published metrics",
+        "Prevents identification of individual submissions"
+      ],
+      dataCollectionPersonalNote: "In the meantime, your Personal Insights dashboard displays analyses based exclusively on your own submissions.",
       scores: {
         transparency: "Transparency Index",
         transparencyDesc: "Measures reviewer presence and editorial engagement in the decision process",
