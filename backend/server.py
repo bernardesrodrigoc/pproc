@@ -1542,48 +1542,133 @@ async def get_my_insights(request: Request):
 
 # ============== FORM OPTIONS ==============
 
-# Import CNPq hierarchical areas
-from data.cnpq_areas import get_grande_areas, get_areas, get_subareas, get_area_by_code
+# Import CNPq hierarchical areas (static fallback)
+from data.cnpq_areas import get_grande_areas as get_static_grande_areas, get_areas as get_static_areas, get_subareas as get_static_subareas, get_area_by_code as get_static_area_by_code
+
+async def ensure_areas_initialized():
+    """Ensure scientific areas are initialized in the database"""
+    count = await db.scientific_areas.count_documents({})
+    if count == 0:
+        from data.cnpq_areas import CNPQ_AREAS
+        
+        areas_to_insert = []
+        for ga_code, ga_data in CNPQ_AREAS.items():
+            areas_to_insert.append({
+                "code": ga_code,
+                "name": ga_data["name"],
+                "name_en": ga_data["name_en"],
+                "level": "grande_area",
+                "parent_code": None,
+                "is_active": True,
+                "submission_count": 0,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            
+            for area_code, area_data in ga_data["areas"].items():
+                areas_to_insert.append({
+                    "code": area_code,
+                    "name": area_data["name"],
+                    "name_en": area_data["name_en"],
+                    "level": "area",
+                    "parent_code": ga_code,
+                    "is_active": True,
+                    "submission_count": 0,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                })
+                
+                for subarea in area_data.get("subareas", []):
+                    areas_to_insert.append({
+                        "code": subarea["code"],
+                        "name": subarea["name"],
+                        "name_en": subarea["name_en"],
+                        "level": "subarea",
+                        "parent_code": area_code,
+                        "is_active": True,
+                        "submission_count": 0,
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    })
+        
+        if areas_to_insert:
+            await db.scientific_areas.insert_many(areas_to_insert)
+    return True
 
 @api_router.get("/options/scientific-areas")
 async def get_scientific_areas():
     """Get list of scientific areas (legacy - returns Grande Áreas for backwards compatibility)"""
-    # Return Grande Áreas in legacy format for backwards compatibility
-    grande_areas = get_grande_areas()
-    return [
-        {"id": ga["code"], "name": ga["name"], "name_en": ga["name_en"]}
-        for ga in grande_areas
-    ]
+    await ensure_areas_initialized()
+    
+    # Get from DB (only active)
+    areas = await db.scientific_areas.find(
+        {"level": "grande_area", "is_active": True},
+        {"_id": 0, "code": 1, "name": 1, "name_en": 1}
+    ).sort("code", 1).to_list(100)
+    
+    return [{"id": a["code"], "name": a["name"], "name_en": a["name_en"]} for a in areas]
 
 # ============== CNPq HIERARCHICAL AREAS ==============
 
 @api_router.get("/options/cnpq/grande-areas")
 async def get_cnpq_grande_areas():
     """Get list of CNPq Grande Áreas (top level)"""
-    return get_grande_areas()
+    await ensure_areas_initialized()
+    
+    areas = await db.scientific_areas.find(
+        {"level": "grande_area", "is_active": True},
+        {"_id": 0, "code": 1, "name": 1, "name_en": 1}
+    ).sort("code", 1).to_list(100)
+    
+    return areas
 
 @api_router.get("/options/cnpq/areas/{grande_area_code}")
 async def get_cnpq_areas(grande_area_code: str):
     """Get list of CNPq Áreas for a given Grande Área"""
-    areas = get_areas(grande_area_code)
+    await ensure_areas_initialized()
+    
+    areas = await db.scientific_areas.find(
+        {"level": "area", "parent_code": grande_area_code, "is_active": True},
+        {"_id": 0, "code": 1, "name": 1, "name_en": 1}
+    ).sort("code", 1).to_list(100)
+    
     if not areas:
-        raise HTTPException(status_code=404, detail="Grande Área not found")
+        # Check if grande_area exists
+        ga = await db.scientific_areas.find_one({"code": grande_area_code, "level": "grande_area"})
+        if not ga:
+            raise HTTPException(status_code=404, detail="Grande Área not found")
+    
     return areas
 
 @api_router.get("/options/cnpq/subareas/{area_code}")
 async def get_cnpq_subareas(area_code: str):
     """Get list of CNPq Subáreas for a given Área"""
-    subareas = get_subareas(area_code)
-    # Note: Some áreas don't have subáreas, so empty list is valid
+    await ensure_areas_initialized()
+    
+    subareas = await db.scientific_areas.find(
+        {"level": "subarea", "parent_code": area_code, "is_active": True},
+        {"_id": 0, "code": 1, "name": 1, "name_en": 1}
+    ).sort("code", 1).to_list(500)
+    
     return subareas
 
 @api_router.get("/options/cnpq/lookup/{code}")
 async def get_cnpq_area_lookup(code: str):
     """Lookup CNPq area by full code (e.g., '1.01.02')"""
-    area = get_area_by_code(code)
+    await ensure_areas_initialized()
+    
+    area = await db.scientific_areas.find_one(
+        {"code": code},
+        {"_id": 0}
+    )
+    
     if not area:
         raise HTTPException(status_code=404, detail="Area code not found")
-    return area
+    
+    return {
+        "type": area["level"],
+        "code": area["code"],
+        "name": area["name"],
+        "name_en": area["name_en"],
+        "is_active": area.get("is_active", True)
+    }
 
 @api_router.get("/options/manuscript-types")
 async def get_manuscript_types():
