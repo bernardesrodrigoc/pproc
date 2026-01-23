@@ -748,6 +748,125 @@ async def logout(request: Request, response: Response):
     response.delete_cookie(key="session_token", path="/")
     return {"message": "Logged out successfully"}
 
+
+# --- GOOGLE OAUTH IMPLEMENTATION ---
+
+@api_router.get("/auth/google/authorize")
+async def google_authorize(request: Request):
+    """Inicia o login com Google"""
+    client_id = os.environ.get("GOOGLE_CLIENT_ID")
+    redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI")
+    
+    if not client_id or not redirect_uri:
+        raise HTTPException(status_code=500, detail="Google Auth not configured")
+
+    # Escopos: o que queremos acessar do usuário
+    scope = "openid email profile"
+    
+    # Gera URL do Google
+    params = {
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": scope,
+        "access_type": "offline",
+        "prompt": "consent"
+    }
+    
+    auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
+    return {"url": auth_url}
+
+@api_router.get("/auth/google/callback")
+async def google_callback(request: Request, code: str):
+    """Recebe o código do Google e cria a sessão"""
+    
+    # 1. Troca o código pelo Token de Acesso
+    token_url = "https://oauth2.googleapis.com/token"
+    data = {
+        "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
+        "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
+        "code": code,
+        "grant_type": "authorization_code",
+        "redirect_uri": os.environ.get("GOOGLE_REDIRECT_URI"),
+    }
+    
+    async with httpx.AsyncClient() as client:
+        token_res = await client.post(token_url, data=data)
+        if token_res.status_code != 200:
+            raise HTTPException(status_code=400, detail="Failed to get token from Google")
+        
+        token_data = token_res.json()
+        access_token = token_data.get("access_token")
+        
+        # 2. Usa o token para pegar os dados do usuário
+        user_info_res = await client.get(
+            "https://www.googleapis.com/oauth2/v1/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        user_info = user_info_res.json()
+
+    # 3. Lógica de Login/Cadastro (Similar ao que você já tem)
+    email = user_info.get("email")
+    name = user_info.get("name")
+    picture = user_info.get("picture")
+    
+    # Verifica se usuário existe
+    user = await db.users.find_one({"email": email})
+    
+    if user:
+        user_id = user["user_id"]
+        # Atualiza foto/nome se mudou
+        await db.users.update_one({"user_id": user_id}, {"$set": {"name": name, "picture": picture}})
+    else:
+        # Cria novo usuário
+        user_id = f"user_{uuid.uuid4().hex[:12]}"
+        hashed_id = generate_hashed_id(email) # Sua função existente
+        new_user = {
+            "user_id": user_id,
+            "email": email,
+            "name": name,
+            "picture": picture,
+            "auth_provider": "google",
+            "hashed_id": hashed_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            # ... adicione os outros campos padrão (trust_score, etc) ...
+            "trust_score": 0.0,
+            "contribution_count": 0,
+            "validated_count": 0,
+            "flagged_count": 0,
+            "is_admin": False
+        }
+        await db.users.insert_one(new_user)
+
+    # 4. Cria Sessão
+    session_token = f"google_{uuid.uuid4().hex}"
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    
+    await db.user_sessions.insert_one({
+        "session_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "session_token": session_token,
+        "expires_at": expires_at.isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
+    # 5. Redireciona para o Frontend com o Cookie
+    response = RedirectResponse(url="https://pubprocess.up.railway.app/dashboard")
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        max_age=7 * 24 * 60 * 60
+    )
+    
+    return response
+
+
+
+
+
 # ============== USER ENDPOINTS ==============
 
 @api_router.put("/users/profile")
