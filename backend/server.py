@@ -776,17 +776,26 @@ async def google_authorize(request: Request):
     auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
     return {"url": auth_url}
 
-@api_router.get("/auth/google/callback")
-async def google_callback(request: Request, code: str):
-    print(f"✅ ROTA CALLBACK ACESSADA! Code recebido: {code[:10]}...") # Log 1
+
+
+# Modelo para receber o código via JSON
+class GoogleAuthRequest(BaseModel):
+    code: str
+
+@api_router.post("/auth/google/exchange")
+async def google_exchange(payload: GoogleAuthRequest, response: Response):
+    """Troca o código do Google por sessão via POST (Chamado pelo Frontend)"""
+    code = payload.code
     
     try:
+        # Configurações
         client_id = os.environ.get("GOOGLE_CLIENT_ID")
         client_secret = os.environ.get("GOOGLE_CLIENT_SECRET")
-        redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI")
-        
-        print(f"🔍 CONFIG: ID={client_id[:5]}... URI={redirect_uri}") # Log 2
+        # IMPORTANTE: O redirect_uri AQUI deve ser IDÊNTICO ao que foi usado 
+        # para gerar o link no login, ou seja, aquele com /api/...
+        redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI") 
 
+        # Troca Token
         token_url = "https://oauth2.googleapis.com/token"
         data = {
             "client_id": client_id,
@@ -796,46 +805,41 @@ async def google_callback(request: Request, code: str):
             "redirect_uri": redirect_uri,
         }
         
-        print("🚀 Enviando requisição para o Google...") # Log 3
-        
         async with httpx.AsyncClient() as client:
             token_res = await client.post(token_url, data=data)
-            print(f"📩 Resposta Google Token: {token_res.status_code}") # Log 4
-            
             if token_res.status_code != 200:
-                print(f"❌ Erro Google: {token_res.text}")
-                return JSONResponse({"error": token_res.text}, status_code=400)
+                logger.error(f"Google Token Error: {token_res.text}")
+                raise HTTPException(status_code=400, detail="Invalid code from Google")
             
             token_data = token_res.json()
             access_token = token_data.get("access_token")
             
-            print("🚀 Buscando dados do usuário...") # Log 5
             user_info_res = await client.get(
                 "https://www.googleapis.com/oauth2/v1/userinfo",
                 headers={"Authorization": f"Bearer {access_token}"}
             )
-            print(f"📩 Resposta User Info: {user_info_res.status_code}") # Log 6
             user_info = user_info_res.json()
 
+        # Processa Usuário (Igual ao código anterior)
         email = user_info.get("email")
-        print(f"👤 Usuário identificado: {email}") # Log 7
+        name = user_info.get("name")
+        picture = user_info.get("picture")
         
-        # ... (Lógica de Banco de Dados simplificada para teste) ...
-        # Se chegar até aqui, o erro não é de conexão
-        
-        # Tenta buscar ou criar usuário (Resumido para garantir que não é erro de banco)
         user = await db.users.find_one({"email": email})
-        user_id = user["user_id"] if user else f"user_{uuid.uuid4().hex[:12]}"
         
-        if not user:
-             # Criação rápida se não existir
-             print("🆕 Criando novo usuário...")
-             new_user = {
+        if user:
+            user_id = user["user_id"]
+            await db.users.update_one({"user_id": user_id}, {"$set": {"name": name, "picture": picture}})
+        else:
+            user_id = f"user_{uuid.uuid4().hex[:12]}"
+            hashed_id = generate_hashed_id(email)
+            new_user = {
                 "user_id": user_id,
                 "email": email,
-                "name": user_info.get("name"),
+                "name": name,
+                "picture": picture,
                 "auth_provider": "google",
-                "hashed_id": generate_hashed_id(email),
+                "hashed_id": hashed_id,
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "trust_score": 0.0,
                 "contribution_count": 0,
@@ -843,9 +847,9 @@ async def google_callback(request: Request, code: str):
                 "flagged_count": 0,
                 "is_admin": False
             }
-             await db.users.insert_one(new_user)
+            await db.users.insert_one(new_user)
 
-        # Cria sessão
+        # Cria Sessão
         session_token = f"google_{uuid.uuid4().hex}"
         expires_at = datetime.now(timezone.utc) + timedelta(days=7)
         await db.user_sessions.insert_one({
@@ -856,23 +860,22 @@ async def google_callback(request: Request, code: str):
             "created_at": datetime.now(timezone.utc).isoformat()
         })
 
-        print("✅ Tudo certo! Redirecionando...") # Log 8
-        response = RedirectResponse(url="https://pubprocess.up.railway.app/dashboard")
+        # Define Cookie
         response.set_cookie(
             key="session_token",
             value=session_token,
             httponly=True,
             secure=True,
             samesite="none",
-            max_age=604800
+            path="/",
+            max_age=7 * 24 * 60 * 60
         )
-        return response
+        
+        return {"status": "success", "user_id": user_id}
 
     except Exception as e:
-        import traceback
-        error_msg = f"CRASH: {str(e)}\n{traceback.format_exc()}"
-        print(error_msg) # Imprime no Log do Railway
-        return JSONResponse({"fatal_error": str(e), "trace": traceback.format_exc()}, status_code=500)
+        logger.error(f"Google Exchange Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 
