@@ -10,16 +10,20 @@ export function AuthProvider({ children }) {
   const [orcidConfigured, setOrcidConfigured] = useState(false);
   const [authVersion, setAuthVersion] = useState(0); // Force re-render on auth changes
 
+  // 1. Check Authentication Status (COM CREDENTIALS: INCLUDE)
   const checkAuth = useCallback(async () => {
     try {
       const response = await fetch(`${API}/auth/me`, {
-        credentials: 'include'
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include' // <--- ESSENCIAL: Envia o Cookie da sessão para o backend
       });
       
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
-        setAuthVersion(v => v + 1); // Force components to re-check auth state
+        setAuthVersion(v => v + 1);
       } else {
         setUser(null);
       }
@@ -31,7 +35,7 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Check if ORCID OAuth is configured
+  // 2. Check ORCID Status
   const checkOrcidStatus = useCallback(async () => {
     try {
       const response = await fetch(`${API}/auth/orcid/status`);
@@ -49,15 +53,25 @@ export function AuthProvider({ children }) {
     checkOrcidStatus();
   }, [checkAuth, checkOrcidStatus]);
 
-  const loginWithGoogle = () => {
-    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    const redirectUrl = window.location.origin + '/auth/callback'; 
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+  // 3. Login With Google (ATUALIZADO para Self-Hosted)
+  // Agora essa função aponta para o SEU backend, não para a Emergent
+  const loginWithGoogle = async () => {
+    try {
+      const response = await fetch(`${API}/auth/google/authorize`);
+      if (response.ok) {
+        const data = await response.json();
+        window.location.href = data.url;
+      } else {
+        console.error("Failed to get Google auth URL");
+      }
+    } catch (error) {
+      console.error("Google login error:", error);
+    }
   };
 
+  // 4. Login With ORCID
   const loginWithOrcid = async (redirectAfter = '/dashboard') => {
     try {
-      // Get the ORCID authorization URL from backend
       const response = await fetch(`${API}/auth/orcid/authorize?redirect=${encodeURIComponent(redirectAfter)}`, {
         headers: {
           'Origin': window.location.origin
@@ -69,11 +83,7 @@ export function AuthProvider({ children }) {
       }
       
       const data = await response.json();
-      
-      // Store state for callback verification
       sessionStorage.setItem('orcid_state', data.state);
-      
-      // Redirect to ORCID authorization page
       window.location.href = data.authorization_url;
     } catch (error) {
       console.error('ORCID auth initiation error:', error);
@@ -81,28 +91,23 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // 5. Process ORCID Callback
   const processOrcidCallback = async (code, state) => {
     try {
-      // Verify state matches
       const storedState = sessionStorage.getItem('orcid_state');
       if (storedState && state !== storedState) {
         throw new Error('State mismatch - possible CSRF attack');
       }
       
-      // Clear stored state
       sessionStorage.removeItem('orcid_state');
       
-      // Exchange code for session - redirect_uri is handled by backend env var
       const response = await fetch(`${API}/auth/orcid/callback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        credentials: 'include',
-        body: JSON.stringify({
-          code,
-          state
-        })
+        credentials: 'include', // Importante
+        body: JSON.stringify({ code, state })
       });
 
       if (!response.ok) {
@@ -112,7 +117,7 @@ export function AuthProvider({ children }) {
 
       const userData = await response.json();
       setUser(userData);
-      setAuthVersion(v => v + 1); // Force re-render
+      setAuthVersion(v => v + 1);
       return userData;
     } catch (error) {
       console.error('ORCID callback error:', error);
@@ -120,24 +125,24 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // 6. Logout
   const logout = async () => {
     try {
       await fetch(`${API}/auth/logout`, {
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include' // Importante para apagar o cookie
       });
     } catch (error) {
       console.error('Logout error:', error);
     }
-    // Clear ALL auth state immediately and synchronously
     setUser(null);
     setAuthVersion(v => v + 1);
-    // Don't redirect immediately - let state update propagate
     setTimeout(() => {
-      window.location.href = '/';
+      window.location.href = '/login'; // Redireciona para login
     }, 100);
   };
 
+  // 7. Process Session (Legacy/Emergent) - Mantido para compatibilidade
   const processSession = async (sessionId) => {
     try {
       const response = await fetch(`${API}/auth/session`, {
@@ -152,9 +157,8 @@ export function AuthProvider({ children }) {
 
       if (response.ok) {
         const userData = await response.json();
-        // Set user state BEFORE returning
         setUser(userData);
-        setAuthVersion(v => v + 1); // Force components to update
+        setAuthVersion(v => v + 1);
         return userData;
       }
       throw new Error('Session processing failed');
@@ -164,6 +168,7 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // 8. Update Profile
   const updateProfile = async (data) => {
     try {
       const response = await fetch(`${API}/users/profile`, {
@@ -187,7 +192,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Compute derived state values
   const isAuthenticated = !!user;
   const isAdmin = user?.is_admin === true;
   const trustScoreVisible = user?.trust_score_visible || false;
@@ -196,18 +200,18 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{ 
       user, 
       loading, 
-      loginWithGoogle,
-      loginWithOrcid,
-      processOrcidCallback,
+      loginWithGoogle, 
+      loginWithOrcid, 
+      processOrcidCallback, 
       logout, 
       processSession, 
-      updateProfile,
-      checkAuth,
-      isAuthenticated,
-      isAdmin,
-      trustScoreVisible,
-      orcidConfigured,
-      authVersion // Expose for components that need to force re-render
+      updateProfile, 
+      checkAuth, 
+      isAuthenticated, 
+      isAdmin, 
+      trustScoreVisible, 
+      orcidConfigured, 
+      authVersion
     }}>
       {children}
     </AuthContext.Provider>
