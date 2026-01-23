@@ -866,7 +866,7 @@ async def google_exchange(payload: GoogleAuthRequest, response: Response):
             value=session_token,
             httponly=True,
             secure=True,
-            samesite="none",
+            samesite="lax",  # <--- MAIS SEGURO E COMPATÍVEL NESTE CASO
             path="/",
             max_age=7 * 24 * 60 * 60
         )
