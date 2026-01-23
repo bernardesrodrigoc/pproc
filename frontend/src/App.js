@@ -7,6 +7,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import RequireOrcid from "./components/RequireOrcid"; // <--- IMPORTANTE: Novo componente
 import AuthCallback from "./components/AuthCallback";
 import OrcidCallback from "./components/OrcidCallback";
+import GoogleCallback from "./components/GoogleCallback";
 
 // Pages
 import LandingPage from "./pages/LandingPage";
@@ -18,6 +19,7 @@ import SettingsPage from "./pages/SettingsPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import AdminPage from "./pages/AdminPage";
+
 
 import "./App.css";
 
@@ -43,6 +45,9 @@ function AppRouter() {
       {/* Rotas de Callback de Autenticação */}
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/auth/orcid/callback" element={<OrcidCallback />} />
+
+      {/* Rota especial para capturar o retorno do Google que o Backend perdeu */}
+      <Route path="/api/auth/google/callback" element={<GoogleCallback />} />
       
       {/* Rotas Protegidas (Exigem Login) */}
       <Route path="/dashboard" element={
