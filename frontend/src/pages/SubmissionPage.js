@@ -11,7 +11,6 @@ import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
 import { Checkbox } from '../components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Progress } from '../components/ui/progress';
-import { Slider } from '../components/ui/slider';
 import { 
   ChevronRight, 
   ChevronLeft, 
@@ -27,7 +26,8 @@ import {
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
 export default function SubmissionPage() {
-  const { t } = useLanguage();
+  // MUDANÇA 1: Extraímos 'language' para saber qual idioma está ativo
+  const { t, language } = useLanguage(); 
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   
@@ -36,6 +36,17 @@ export default function SubmissionPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
+
+  // MUDANÇA 2: Função auxiliar para escolher o nome baseado no idioma
+  const getLocalizedName = (item) => {
+    if (!item) return '';
+    // Se o idioma for inglês e o item tiver tradução, usa a tradução
+    if (language === 'en' && item.name_en) {
+      return item.name_en;
+    }
+    // Caso contrário (pt, es, ou sem tradução), usa o nome original
+    return item.name;
+  };
   
   // Form data
   const [formData, setFormData] = useState({
@@ -482,7 +493,8 @@ export default function SubmissionPage() {
                       <SelectContent>
                         {cnpqOptions.grandeAreas.map(ga => (
                           <SelectItem key={ga.code} value={ga.code}>
-                            {ga.name}
+                            {/* MUDANÇA 3: Usando a função de tradução */}
+                            {getLocalizedName(ga)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -508,7 +520,8 @@ export default function SubmissionPage() {
                         <SelectContent>
                           {cnpqOptions.areas.map(area => (
                             <SelectItem key={area.code} value={area.code}>
-                              {area.name}
+                              {/* MUDANÇA 4: Usando a função de tradução */}
+                              {getLocalizedName(area)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -532,7 +545,8 @@ export default function SubmissionPage() {
                         <SelectContent>
                           {cnpqOptions.subareas.map(subarea => (
                             <SelectItem key={subarea.code} value={subarea.code}>
-                              {subarea.name}
+                              {/* MUDANÇA 5: Usando a função de tradução */}
+                              {getLocalizedName(subarea)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -761,7 +775,6 @@ export default function SubmissionPage() {
                     onValueChange={(v) => {
                       const isOpenAccess = v === 'yes';
                       updateFormData('journal_is_open_access', isOpenAccess);
-                      // Reset APC if not open access
                       if (!isOpenAccess) {
                         updateFormData('apc_range', 'no_apc');
                       }
