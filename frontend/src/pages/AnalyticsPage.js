@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import VisibilityBanner, { VisibilityNotice, DataCollectionPanel } from '../components/VisibilityBanner';
+// MUDANÇA: Importamos apenas o painel de dados, não o Banner padrão que tinha texto fixo
+import { DataCollectionPanel } from '../components/VisibilityBanner'; 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -16,22 +17,22 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
+  PieChart, 
+  Pie, 
+  Cell, 
   Legend
 } from 'recharts';
 import { 
   BarChart3, 
   Building2, 
   BookOpen, 
-  Microscope,
-  Info,
-  AlertCircle,
+  Microscope, 
+  Info, 
+  AlertCircle, 
   Loader2,
-  TrendingUp,
-  TrendingDown,
-  Minus
+  TrendingUp, 
+  TrendingDown, 
+  Minus 
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -51,7 +52,6 @@ const getScoreIcon = (score) => {
   return <TrendingDown className="w-4 h-4" />;
 };
 
-// ScoreCard component moved outside to prevent recreation on each render
 const ScoreCard = ({ label, description, score }) => (
   <div className="bg-white border border-stone-200 rounded-lg p-4">
     <div className="flex items-start justify-between mb-2">
@@ -143,10 +143,12 @@ export default function AnalyticsPage() {
   return (
     <div className="min-h-screen bg-[#FAFAF9]">
       <Navbar />
-      <VisibilityBanner />
+      
+      {/* REMOVIDO: <VisibilityBanner /> (Este era o banner estático indesejado) */}
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" data-testid="analytics-dashboard">
-        {/* Professional Data Collection Panel if visibility restricted */}
+        
+        {/* Painel Dinâmico: Só aparece se o backend disser que está restrito */}
         {overview?.visibility_restricted && (
           <DataCollectionPanel className="mb-8" />
         )}
