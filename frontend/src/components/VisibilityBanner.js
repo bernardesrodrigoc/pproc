@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
-import { Info, X, Shield, BarChart3, Lock, CheckCircle } from 'lucide-react';
+import { Info, X, Shield, BarChart3, Lock } from 'lucide-react'; // Removi CheckCircle que não é mais usado
 import { Card, CardContent } from './ui/card';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -68,7 +68,7 @@ export default function VisibilityBanner({ className = '' }) {
  */
 export function DataCollectionPanel({ className = '' }) {
   const { t } = useLanguage();
-  
+   
   // Get array of reasons or use defaults
   const whyList = t('analytics.dataCollectionWhyList') || [
     "Protects contributor identity through aggregation",
@@ -79,7 +79,7 @@ export function DataCollectionPanel({ className = '' }) {
   return (
     <Card className={`bg-gradient-to-br from-stone-50 to-stone-100 border-stone-200 ${className}`}>
       <CardContent className="p-6 sm:p-8">
-        <div className="text-center mb-6">
+        <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-stone-200/50 mb-4">
             <BarChart3 className="w-8 h-8 text-stone-600" />
           </div>
@@ -92,16 +92,7 @@ export function DataCollectionPanel({ className = '' }) {
           </p>
         </div>
 
-        {/* Confirmation that submission was recorded */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-          <div className="flex items-start space-x-3">
-            <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-green-800">
-              {t('analytics.dataCollectionNote') || 
-                'Your contribution has been recorded and will be included in aggregated analyses once publication thresholds are met.'}
-            </p>
-          </div>
-        </div>
+        {/* REMOVIDO: Bloco verde com mensagem fixa de "Your contribution has been recorded..." */}
 
         {/* Why this approach */}
         <div className="grid md:grid-cols-2 gap-6">
@@ -143,7 +134,7 @@ export function DataCollectionPanel({ className = '' }) {
  */
 export function VisibilityNotice({ message, className = '' }) {
   const { t } = useLanguage();
-  
+   
   if (!message) return null;
 
   return (
