@@ -1351,46 +1351,48 @@ async def get_visibility_status():
     }
 
 def get_visibility_message(settings: dict) -> Optional[str]:
-    """Generate appropriate message based on visibility settings
-    
-    Messages use institutional, methodologically responsible, neutral tone.
-    Avoid language suggesting platform is 'empty' or 'in testing'.
-    """
+    """Generate appropriate message based on visibility settings"""
     mode = settings.get("visibility_mode", "user_only")
     public_enabled = settings.get("public_stats_enabled", False)
     
+    # MUDANÇA: Retorna None para não poluir a tela com texto repetitivo
     if mode == "user_only":
-        return "As estatísticas agregadas são exibidas automaticamente quando há volume mínimo de dados para garantir interpretação adequada."
+        return None 
+        
     elif mode == "threshold_based" and not public_enabled:
-        return "Sua contribuição ajuda a construir uma infraestrutura de dados para análise do processo editorial científico."
+        return "Building data infrastructure for scientific transparency."
+    
     elif mode == "admin_forced" and not public_enabled:
-        return "As estatísticas públicas estão em revisão metodológica."
+        return "Public statistics are currently under methodological review."
+        
     return None
 
 @api_router.get("/analytics/overview")
 async def get_analytics_overview():
-    """Get overall platform statistics with quality indices"""
+    """Get overall platform statistics with extended multivariate metrics"""
     settings = await get_platform_settings()
     base_query = await get_submission_base_query(settings)
     
-    # Check if public stats should be shown
+    # Check visibility
     mode = settings.get("visibility_mode", "user_only")
     public_enabled = settings.get("public_stats_enabled", False)
     
-    # Count total submissions (respecting demo mode)
     total_submissions = await db.submissions.count_documents(base_query)
     
     # Threshold for showing observation count (hidden until 400+)
     OBSERVATION_THRESHOLD = 400
     show_observation_count = total_submissions >= OBSERVATION_THRESHOLD
     
-    # For user_only mode, return minimal info
+    # MUDANÇA: Usa a nova lógica de mensagem limpa
+    visibility_msg = get_visibility_message(settings)
+
+    # For user_only mode or restricted visibility
     if mode == "user_only" and not public_enabled:
         return {
             "total_submissions": total_submissions if show_observation_count else None,
             "sufficient_data": False,
             "visibility_restricted": True,
-            "message": get_visibility_message(settings),
+            "message": visibility_msg, # Agora virá vazio (None) na maioria dos casos
             "observation_status": "collecting" if not show_observation_count else "available"
         }
     
@@ -1399,11 +1401,15 @@ async def get_analytics_overview():
             "total_submissions": total_submissions if show_observation_count else None,
             "sufficient_data": False,
             "visibility_restricted": False,
-            "message": "As estatísticas agregadas são exibidas automaticamente quando há volume mínimo de dados para garantir interpretação adequada.",
-            "observation_status": "collecting" if not show_observation_count else "available"
+            "message": "Data collection in progress. Aggregated stats will appear once anonymity thresholds are met.",
+            "observation_status": "collecting"
         }
     
-    # Decision type distribution
+    # Use the multivariate calculation function
+    # (Certifique-se de que a função calculate_quality_indices que fizemos antes está no arquivo)
+    quality_indices = await calculate_quality_indices(base_query, total_submissions, stratify=True)
+    
+    # Aggregation Pipelines
     decision_pipeline = [
         {"$match": base_query},
         {"$group": {"_id": "$decision_type", "count": {"$sum": 1}}},
@@ -1411,7 +1417,6 @@ async def get_analytics_overview():
     ]
     decision_dist = await db.submissions.aggregate(decision_pipeline).to_list(100)
     
-    # Reviewer count distribution
     reviewer_pipeline = [
         {"$match": base_query},
         {"$group": {"_id": "$reviewer_count", "count": {"$sum": 1}}},
@@ -1419,16 +1424,12 @@ async def get_analytics_overview():
     ]
     reviewer_dist = await db.submissions.aggregate(reviewer_pipeline).to_list(100)
     
-    # Time to decision distribution
     time_pipeline = [
         {"$match": base_query},
         {"$group": {"_id": "$time_to_decision", "count": {"$sum": 1}}},
         {"$match": {"count": {"$gte": K_ANONYMITY_THRESHOLD}}}
     ]
     time_dist = await db.submissions.aggregate(time_pipeline).to_list(100)
-    
-    # NEW: Calculate quality indices from new fields
-    quality_indices = await calculate_quality_indices(base_query, total_submissions)
     
     return {
         "total_submissions": total_submissions if show_observation_count else None,
@@ -1438,7 +1439,6 @@ async def get_analytics_overview():
         "decision_distribution": {d["_id"]: d["count"] for d in decision_dist},
         "reviewer_distribution": {d["_id"]: d["count"] for d in reviewer_dist},
         "time_distribution": {d["_id"]: d["count"] for d in time_dist},
-        # NEW: Quality indices
         **quality_indices
     }
 
@@ -1737,11 +1737,7 @@ async def get_area_analytics():
 
 @api_router.get("/users/my-insights")
 async def get_my_insights(request: Request):
-    """Get personal aggregated insights for the current user
-    
-    This allows users to see value from their contributions even when
-    public statistics are not yet available.
-    """
+    """Get personal aggregated insights for the current user"""
     user = await require_auth(request)
     
     # Get user's submissions (real data only, not sample)
@@ -1753,7 +1749,7 @@ async def get_my_insights(request: Request):
     if not user_submissions:
         return {
             "has_data": False,
-            "message": "Submit your first editorial decision to start seeing your personal insights."
+            "message": "Submit your first editorial decision to unlock personal insights."
         }
     
     total = len(user_submissions)
@@ -1799,7 +1795,8 @@ async def get_my_insights(request: Request):
             "total_submissions": total,
             "validated": validated,
             "pending": pending,
-            "contribution_impact": "Your submissions contribute to improving transparency in scholarly publishing."
+            # MUDANÇA: Texto dinâmico e curto em vez da frase longa em inglês
+            "contribution_impact": f"You have contributed {total} case(s) to scientific transparency."
         },
         "insights": {
             "no_peer_review_rate": round((no_peer_review / total) * 100, 1) if total > 0 else 0,
